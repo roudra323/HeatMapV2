@@ -2,11 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { apiClient } from '@/lib/api'
-import { VisualizationData } from '@/lib/types'
+import { VisualizationData, Wallet } from '@/lib/types'
 import ScatterPlot from '@/components/ScatterPlot'
 import NetworkGraph from '@/components/NetworkGraph'
 import CommunityStats from '@/components/CommunityStats'
 import FilterControls from '@/components/FilterControls'
+import SearchBar from '@/components/SearchBar'
+import ExportButton from '@/components/ExportButton'
+import WalletDetailModal from '@/components/WalletDetailModal'
 
 export default function Home() {
   const [data, setData] = useState<VisualizationData | null>(null)
@@ -17,6 +20,10 @@ export default function Home() {
   const [selectedCommunity, setSelectedCommunity] = useState<string>('all')
   const [visualizationMethod, setVisualizationMethod] = useState<'pca' | 'tsne'>('tsne')
   const [showNetwork, setShowNetwork] = useState(false)
+
+  // Search and detail states
+  const [searchAddress, setSearchAddress] = useState<string>('')
+  const [selectedWallet, setSelectedWallet] = useState<Wallet | null>(null)
 
   useEffect(() => {
     loadData()
@@ -66,11 +73,42 @@ export default function Home() {
 
   if (!data) return null
 
-  // Filter wallets based on selected community
-  const filteredWallets =
-    selectedCommunity === 'all'
-      ? data.wallets
-      : data.wallets.filter((w) => w.community === selectedCommunity)
+  // Filter wallets based on selected community and search
+  let filteredWallets = data.wallets
+
+  // Filter by community
+  if (selectedCommunity !== 'all') {
+    filteredWallets = filteredWallets.filter((w) => w.community === selectedCommunity)
+  }
+
+  // Filter by search address
+  if (searchAddress) {
+    filteredWallets = filteredWallets.filter((w) =>
+      w.address.toLowerCase().includes(searchAddress.toLowerCase())
+    )
+  }
+
+  const handleSearch = (address: string) => {
+    setSearchAddress(address)
+    // If exact match, open the wallet detail
+    const exactMatch = data.wallets.find(
+      (w) => w.address.toLowerCase() === address.toLowerCase()
+    )
+    if (exactMatch) {
+      setSelectedWallet(exactMatch)
+    }
+  }
+
+  const handleClearSearch = () => {
+    setSearchAddress('')
+  }
+
+  const handleWalletClick = (address: string) => {
+    const wallet = data.wallets.find((w) => w.address === address)
+    if (wallet) {
+      setSelectedWallet(wallet)
+    }
+  }
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white">
@@ -106,6 +144,19 @@ export default function Home() {
 
       {/* Main Content */}
       <div className="container mx-auto px-6 py-8">
+        {/* Search Bar */}
+        <div className="mb-6">
+          <SearchBar onSearch={handleSearch} onClear={handleClearSearch} />
+          {searchAddress && (
+            <p className="mt-2 text-sm text-purple-300">
+              🔍 Searching for: <code className="bg-slate-700 px-2 py-1 rounded">{searchAddress}</code>
+              {filteredWallets.length === 0 && (
+                <span className="ml-2 text-red-400">- No matches found</span>
+              )}
+            </p>
+          )}
+        </div>
+
         {/* Filter Controls */}
         <FilterControls
           communities={data.community_stats.map((c) => c.community)}
@@ -122,17 +173,27 @@ export default function Home() {
           {/* Scatter Plot - Takes 2 columns */}
           <div className="lg:col-span-2">
             <div className="bg-slate-800/50 rounded-lg border border-purple-500/20 p-6">
-              <h2 className="text-2xl font-bold mb-4">
-                Wallet Clustering ({visualizationMethod.toUpperCase()})
-              </h2>
-              <p className="text-gray-400 mb-6 text-sm">
-                {filteredWallets.length} wallets "{' '}
-                {selectedCommunity === 'all' ? 'All communities' : selectedCommunity}
-              </p>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-2xl font-bold">
+                    Wallet Clustering ({visualizationMethod.toUpperCase()})
+                  </h2>
+                  <p className="text-gray-400 mt-1 text-sm">
+                    {filteredWallets.length} wallets •{' '}
+                    {selectedCommunity === 'all' ? 'All communities' : selectedCommunity}
+                  </p>
+                </div>
+                <ExportButton
+                  wallets={filteredWallets}
+                  filename={`heatmap_${selectedCommunity.toLowerCase().replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}`}
+                  label="Export Wallets"
+                />
+              </div>
               <ScatterPlot
                 wallets={filteredWallets}
                 method={visualizationMethod}
                 highlightCommunity={selectedCommunity === 'all' ? undefined : selectedCommunity}
+                onWalletClick={handleWalletClick}
               />
             </div>
           </div>
@@ -187,6 +248,9 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* Wallet Detail Modal */}
+      <WalletDetailModal wallet={selectedWallet} onClose={() => setSelectedWallet(null)} />
     </main>
   )
 }

@@ -18,10 +18,12 @@ An interactive blockchain wallet behavior analysis platform powered by machine l
   - Wrapper/Bridge User (3 wallets)
 
 ### Interactive Visualizations
-- **Scatter Plot**: PCA/t-SNE embeddings with community color coding
+- **Scatter Plot**: PCA/t-SNE embeddings with community color coding and clickable wallets
 - **Network Graph**: Wallet-to-wallet interaction network with force-directed layout
 - **Community Statistics**: Detailed breakdown of each behavior community
 - **Interactive Filters**: Filter by community, toggle visualization methods
+- **Wallet Search**: Search for specific wallet addresses
+- **Export Functionality**: Export filtered wallet lists in CSV, JSON, or TXT formats
 
 ### Data Coverage
 - **511 analyzed wallets** from minimal dataset
@@ -98,17 +100,32 @@ Identify and target specific wallet behaviors:
 - NFT collectors for NFT project launches
 - Stablecoin users for trading platforms
 - DeFi users for protocol integrations
+- **Export wallet lists** filtered by community for outreach campaigns
 
 ### 2. Wallet Clustering
 Discover similar wallet patterns using t-SNE visualization:
 - Nearby wallets in embedding space have similar behaviors
 - Filter by community to focus on specific segments
+- **Click on any wallet** to view detailed behavior breakdown
 
-### 3. Network Analysis
+### 3. Wallet Research
+Search and analyze specific wallets:
+- **Search by wallet address** to find specific targets
+- View comprehensive wallet details (transactions, token preferences, behavior ratios)
+- Copy addresses for use in other tools or campaigns
+- Export to Etherscan or DeBank for deeper analysis
+
+### 4. Network Analysis
 Find connected wallets:
 - Identify wallet clusters that transact together
 - Discover influential hubs with high connectivity
 - Map token distribution networks
+
+### 5. Data Export for Campaigns
+Export wallet lists for marketing use:
+- **CSV export**: Full wallet data with metrics and community labels
+- **JSON export**: Structured data for programmatic use
+- **TXT export**: Address-only lists for easy copy-paste into marketing tools
 
 ## Technology Stack
 

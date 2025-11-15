@@ -8,6 +8,7 @@ interface ScatterPlotProps {
   wallets: Wallet[]
   method: 'pca' | 'tsne'
   highlightCommunity?: string
+  onWalletClick?: (address: string) => void
 }
 
 const COMMUNITY_COLORS: Record<string, string> = {
@@ -23,7 +24,7 @@ const COMMUNITY_COLORS: Record<string, string> = {
   'Active Trader': '#f97316',
 }
 
-export default function ScatterPlot({ wallets, method, highlightCommunity }: ScatterPlotProps) {
+export default function ScatterPlot({ wallets, method, highlightCommunity, onWalletClick }: ScatterPlotProps) {
   const data = useMemo(() => {
     return wallets.map((wallet) => ({
       x: method === 'pca' ? wallet.pca_x : wallet.tsne_x,
@@ -47,10 +48,19 @@ export default function ScatterPlot({ wallets, method, highlightCommunity }: Sca
           <p className="text-purple-300 text-sm mt-1">
             {point.transactions} transactions
           </p>
+          {onWalletClick && (
+            <p className="text-xs text-gray-500 mt-1">Click to view details</p>
+          )}
         </div>
       )
     }
     return null
+  }
+
+  const handleClick = (data: any) => {
+    if (onWalletClick && data && data.address) {
+      onWalletClick(data.address)
+    }
   }
 
   return (
@@ -75,10 +85,12 @@ export default function ScatterPlot({ wallets, method, highlightCommunity }: Sca
             tick={{ fill: '#9ca3af' }}
           />
           <ZAxis type="number" dataKey="z" range={[20, 200]} />
-          <Tooltip content={<CustomTooltip />} />
+          <Tooltip content={<CustomTooltip />} cursor={{ strokeDasharray: '3 3' }} />
           <Scatter
             data={data}
             fill="#8b5cf6"
+            onClick={handleClick}
+            style={{ cursor: onWalletClick ? 'pointer' : 'default' }}
           >
             {data.map((entry, index) => (
               <Cell
