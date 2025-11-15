@@ -23,13 +23,16 @@ def read_root():
     """API root endpoint"""
     return {
         "message": "HeatMap API",
-        "version": "1.0.0",
+        "version": "2.0.0",
         "endpoints": [
             "/api/wallets",
             "/api/clusters",
             "/api/anomalies",
             "/api/network",
-            "/api/stats"
+            "/api/stats",
+            "/api/visualization",
+            "/api/communities",
+            "/api/embeddings"
         ]
     }
 
@@ -156,5 +159,95 @@ def get_stats():
         return stats
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Data not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/api/visualization", tags=["visualization"])
+def get_visualization_data():
+    """Get complete visualization data (embeddings, communities, network)"""
+    try:
+        with open(DATA_DIR / "results/visualization_data.json") as f:
+            data = json.load(f)
+        return data
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=404,
+            detail="Visualization data not found. Run 'python visualize.py' first."
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/api/communities", tags=["visualization"])
+def get_communities():
+    """Get behavior-based community statistics"""
+    try:
+        with open(DATA_DIR / "results/visualization_data.json") as f:
+            data = json.load(f)
+        return {
+            "communities": data.get("community_stats", []),
+            "total": len(data.get("community_stats", []))
+        }
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=404,
+            detail="Visualization data not found. Run 'python visualize.py' first."
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/api/embeddings", tags=["visualization"])
+def get_embeddings(
+    method: str = Query("tsne", regex="^(pca|tsne)$"),
+    community: str = Query(None)
+):
+    """Get PCA or t-SNE embeddings, optionally filtered by community"""
+    try:
+        with open(DATA_DIR / "results/visualization_data.json") as f:
+            data = json.load(f)
+
+        wallets = data.get("wallets", [])
+
+        # Filter by community if specified
+        if community:
+            wallets = [w for w in wallets if w.get("community") == community]
+
+        # Extract relevant coordinates
+        if method == "pca":
+            embeddings = [
+                {
+                    "address": w["address"],
+                    "x": w["pca_x"],
+                    "y": w["pca_y"],
+                    "community": w["community"],
+                    "total_transactions": w["total_transactions"]
+                }
+                for w in wallets
+            ]
+        else:  # tsne
+            embeddings = [
+                {
+                    "address": w["address"],
+                    "x": w["tsne_x"],
+                    "y": w["tsne_y"],
+                    "community": w["community"],
+                    "total_transactions": w["total_transactions"]
+                }
+                for w in wallets
+            ]
+
+        return {
+            "method": method,
+            "community_filter": community,
+            "total": len(embeddings),
+            "embeddings": embeddings
+        }
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=404,
+            detail="Visualization data not found. Run 'python visualize.py' first."
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
