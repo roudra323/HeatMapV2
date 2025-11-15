@@ -11,8 +11,14 @@ collector:
   timeout: 30
   batch_size: 100
   rate_limit: 5  # requests per second
+  uniswap:
+    minimal_data: true  # If true, only fetch essential fields (sender, recipient, timestamp, amountUSD)
+    default_limit: 1000
+    default_skip: 0
 
 analyzer:
+  use_minimal_data: true  # If true, load cleaned test data from minimal_data for ML analysis
+  minimal_data_path: "minimal_data"  # Path to minimal test data directory
   clustering:
     n_clusters: 5
     min_samples: 10
