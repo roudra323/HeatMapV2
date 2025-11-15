@@ -9,6 +9,7 @@ export interface Wallet {
   wrapped_ratio: number
   nft_ratio: number
   community: string
+  communities?: string[] // All communities the wallet qualifies for
   pca_x: number
   pca_y: number
   tsne_x: number

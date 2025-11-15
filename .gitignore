@@ -33,6 +33,7 @@ ENV/
 .venv
 backend/venv/
 backend/.env
+frontend/.env.local
 
 # Environment Variables
 .env

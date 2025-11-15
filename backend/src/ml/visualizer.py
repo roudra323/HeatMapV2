@@ -116,7 +116,7 @@ class WalletBehaviorAnalyzer:
         return features
 
     def assign_behavior_community(self, features: pd.Series) -> str:
-        """Assign wallet to behavior-based community"""
+        """Assign wallet to behavior-based community (primary community)"""
 
         # Define thresholds
         HIGH_THRESHOLD = 0.5
@@ -143,6 +143,50 @@ class WalletBehaviorAnalyzer:
             return 'Receiver/Collector'
         else:
             return 'Mixed Behavior'
+
+    def get_all_qualifying_communities(self, features: pd.Series) -> List[str]:
+        """Get all communities that a wallet qualifies for based on behavior patterns"""
+        
+        # Define thresholds
+        HIGH_THRESHOLD = 0.5
+        MEDIUM_THRESHOLD = 0.3
+        STABLECOIN_THRESHOLD = 0.3  # Lower threshold for stablecoins (30%) since they're commonly used
+        
+        communities = []
+        
+        # Check each community qualification independently
+        if features['nft_txs'] > 0 and features['total_transactions'] > 5:
+            communities.append('NFT Trader')
+        
+        if features['stablecoin_ratio'] > STABLECOIN_THRESHOLD:
+            communities.append('Stablecoin User')
+        
+        if features['meme_ratio'] > HIGH_THRESHOLD:
+            communities.append('Meme Trader')
+        
+        if features['defi_ratio'] > HIGH_THRESHOLD:
+            communities.append('DeFi User')
+        
+        if features['wrapped_ratio'] > HIGH_THRESHOLD:
+            communities.append('Wrapper/Bridge User')
+        
+        if features['meme_ratio'] > MEDIUM_THRESHOLD and features['defi_ratio'] > MEDIUM_THRESHOLD:
+            communities.append('Active Trader')
+        
+        if features['unique_counterparties'] > 20:
+            communities.append('High Activity Hub')
+        
+        if features['sent_ratio'] > 0.8:
+            communities.append('Sender/Distributor')
+        
+        if features['received_ratio'] > 0.8:
+            communities.append('Receiver/Collector')
+        
+        # If no specific communities match, add Mixed Behavior
+        if not communities:
+            communities.append('Mixed Behavior')
+        
+        return communities
 
     def load_and_process_minimal_data(self, data_dir: str = None) -> pd.DataFrame:
         """Load all minimal data and extract wallet features"""
@@ -296,9 +340,14 @@ class WalletBehaviorAnalyzer:
 
         print("Detecting behavior-based communities...")
 
-        # Assign community based on behavior
+        # Assign primary community based on behavior
         self.features_df['community'] = self.features_df.apply(
             self.assign_behavior_community, axis=1
+        )
+        
+        # Calculate all qualifying communities for each wallet
+        self.features_df['communities'] = self.features_df.apply(
+            self.get_all_qualifying_communities, axis=1
         )
 
         # Print community statistics
@@ -366,11 +415,19 @@ class WalletBehaviorAnalyzer:
         print("Exporting data for frontend...")
 
         # Export wallet data with embeddings and communities
-        wallets_data = self.features_df[[
+        wallet_cols = [
             'address', 'total_transactions', 'unique_tokens', 'unique_counterparties',
             'stablecoin_ratio', 'meme_ratio', 'defi_ratio', 'wrapped_ratio', 'nft_ratio',
-            'community', 'pca_x', 'pca_y', 'tsne_x', 'tsne_y'
-        ]].to_dict('records')
+            'community', 'communities', 'pca_x', 'pca_y', 'tsne_x', 'tsne_y'
+        ]
+        wallets_data = self.features_df[wallet_cols].to_dict('records')
+        
+        # Convert communities from list to list (ensure it's serializable)
+        for wallet in wallets_data:
+            if isinstance(wallet.get('communities'), list):
+                wallet['communities'] = wallet['communities']
+            else:
+                wallet['communities'] = [wallet.get('community', 'Mixed Behavior')]
 
         # Export network data
         network_data = None

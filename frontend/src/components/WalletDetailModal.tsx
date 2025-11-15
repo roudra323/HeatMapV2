@@ -68,14 +68,40 @@ export default function WalletDetailModal({ wallet, onClose }: WalletDetailModal
             </div>
           </div>
 
-          {/* Community Badge */}
+          {/* Community Badges */}
           <div>
-            <label className="text-sm text-purple-300 font-semibold">Community</label>
-            <div className="mt-1">
+            <label className="text-sm text-purple-300 font-semibold mb-2 block">
+              Communities
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {/* Primary Community */}
               <span className="inline-block bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold">
                 {wallet.community}
+                <span className="ml-2 text-xs opacity-75">(Primary)</span>
               </span>
+              
+              {/* All Other Communities */}
+              {wallet.communities && wallet.communities.length > 1 && (
+                <>
+                  {wallet.communities
+                    .filter((c) => c !== wallet.community)
+                    .map((community) => (
+                      <span
+                        key={community}
+                        className="inline-block bg-purple-800/50 border border-purple-500/50 text-white px-4 py-2 rounded-lg font-medium"
+                      >
+                        {community}
+                      </span>
+                    ))}
+                </>
+              )}
             </div>
+            {wallet.communities && wallet.communities.length > 1 && (
+              <p className="mt-2 text-xs text-gray-400">
+                This wallet qualifies for {wallet.communities.length} community
+                {wallet.communities.length > 1 ? 'ies' : ''} based on its behavior patterns
+              </p>
+            )}
           </div>
 
           {/* Activity Metrics */}

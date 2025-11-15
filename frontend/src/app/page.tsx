@@ -219,6 +219,7 @@ export default function Home() {
               <NetworkGraph
                 network={data.network}
                 highlightCommunity={selectedCommunity === 'all' ? undefined : selectedCommunity}
+                searchAddress={searchAddress}
               />
             </div>
           </div>

@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "copy-data": "node scripts/copy-data.js",
+    "prepare-data": "npm run copy-data"
   },
   "dependencies": {
     "@next/swc-darwin-arm64": "^16.0.3",
