@@ -1,0 +1,25 @@
+# Base Configuration
+api:
+  title: "HeatMap API"
+  version: "1.0.0"
+  cors_origins:
+    - "http://localhost:3000"
+    - "http://localhost:3001"
+
+collector:
+  max_retries: 3
+  timeout: 30
+  batch_size: 100
+  rate_limit: 5  # requests per second
+
+analyzer:
+  clustering:
+    n_clusters: 5
+    min_samples: 10
+  network:
+    max_depth: 3
+    min_connections: 2
+  
+output:
+  format: csv
+  save_intermediate: true
