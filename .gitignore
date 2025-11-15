@@ -16,6 +16,8 @@ eggs/
 lib/
 lib64/
 !frontend/src/lib/
+frontend/node_modules
+frontend/.next
 parts/
 sdist/
 var/
@@ -31,6 +33,7 @@ ENV/
 .venv
 backend/venv/
 backend/.env
+frontend/.env.local
 
 # Environment Variables
 .env
