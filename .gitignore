@@ -16,6 +16,8 @@ eggs/
 lib/
 lib64/
 !frontend/src/lib/
+frontend/node_modules
+frontend/.next
 parts/
 sdist/
 var/

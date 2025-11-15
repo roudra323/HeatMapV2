@@ -14,10 +14,14 @@ from src.ml.visualizer import WalletBehaviorAnalyzer, run_full_analysis
 
 
 def main():
+    # Determine default output path dynamically
+    backend_dir = os.path.dirname(__file__)
+    default_output = os.path.join(backend_dir, 'data', 'results', 'visualization_data.json')
+    
     parser = argparse.ArgumentParser(description='Wallet Behavior Visualization')
     parser.add_argument(
         '--output',
-        default='/home/user/HeatMapV2/backend/data/results/visualization_data.json',
+        default=default_output,
         help='Output JSON file path'
     )
     parser.add_argument(

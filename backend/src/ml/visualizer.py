@@ -144,12 +144,19 @@ class WalletBehaviorAnalyzer:
         else:
             return 'Mixed Behavior'
 
-    def load_and_process_minimal_data(self, data_dir: str = '/home/user/HeatMapV2/backend/minimal_data') -> pd.DataFrame:
+    def load_and_process_minimal_data(self, data_dir: str = None) -> pd.DataFrame:
         """Load all minimal data and extract wallet features"""
-        print("Loading minimal data...")
-
         import os
         import glob
+        
+        # Determine data directory path dynamically if not provided
+        if data_dir is None:
+            # Get the backend directory (parent of src directory)
+            current_file = os.path.abspath(__file__)
+            backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(current_file)))
+            data_dir = os.path.join(backend_dir, 'minimal_data')
+        
+        print(f"Loading minimal data from: {data_dir}")
 
         # Load all ERC20 transfers
         erc20_files = glob.glob(f'{data_dir}/erc20_minimal/*.csv')
@@ -190,6 +197,13 @@ class WalletBehaviorAnalyzer:
                     all_transfers.append(df)
             except Exception as e:
                 print(f"Error loading {file}: {e}")
+
+        # Check if we have any data before concatenating
+        if not all_transfers:
+            raise ValueError(
+                f"No data files found in {data_dir}. "
+                f"Please ensure CSV files exist in erc20_minimal/, erc721_minimal/, or erc1155_minimal/ subdirectories."
+            )
 
         # Combine all transfers
         transfers_df = pd.concat(all_transfers, ignore_index=True)
@@ -295,11 +309,19 @@ class WalletBehaviorAnalyzer:
 
         return self.features_df
 
-    def build_interaction_network(self, data_dir: str = '/home/user/HeatMapV2/backend/minimal_data') -> nx.Graph:
+    def build_interaction_network(self, data_dir: str = None) -> nx.Graph:
         """Build wallet interaction network"""
-        print("Building wallet interaction network...")
-
+        import os
         import glob
+        
+        # Determine data directory path dynamically if not provided
+        if data_dir is None:
+            # Get the backend directory (parent of src directory)
+            current_file = os.path.abspath(__file__)
+            backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(current_file)))
+            data_dir = os.path.join(backend_dir, 'minimal_data')
+        
+        print(f"Building wallet interaction network from: {data_dir}")
 
         # Load all transfer data
         all_files = glob.glob(f'{data_dir}/**/*.csv', recursive=True)
@@ -418,10 +440,17 @@ class WalletBehaviorAnalyzer:
         return export_data
 
 
-def run_full_analysis(output_file: str = '/home/user/HeatMapV2/backend/data/results/visualization_data.json'):
+def run_full_analysis(output_file: str = None):
     """Run the complete analysis pipeline"""
     import json
     import os
+
+    # Determine output file path dynamically if not provided
+    if output_file is None:
+        # Get the backend directory (parent of src directory)
+        current_file = os.path.abspath(__file__)
+        backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(current_file)))
+        output_file = os.path.join(backend_dir, 'data', 'results', 'visualization_data.json')
 
     analyzer = WalletBehaviorAnalyzer()
 
