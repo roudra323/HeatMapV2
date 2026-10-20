@@ -16,7 +16,10 @@ ALGORITHM = "louvain"
 
 
 def build_graph(engine: Engine, chain_id: int, *, exclude_hubs: bool = True) -> nx.Graph:
-    """Undirected graph weighted by transfer count; hubs are left out so they don't merge everything."""
+    """Undirected graph weighted by transfer count.
+
+    Hubs are left out so they do not merge everything into one community.
+    """
     graph = nx.Graph()
     with session_scope(engine) as session:
         hubs = hub_addresses(session, chain_id) if exclude_hubs else set()
