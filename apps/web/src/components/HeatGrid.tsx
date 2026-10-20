@@ -31,7 +31,10 @@ export function HeatGrid({
 
   return (
     <div className="overflow-x-auto">
-      <table className="border-separate border-spacing-0.5 text-xs">
+      <table className="w-full min-w-96 table-fixed border-separate border-spacing-0.5 text-xs">
+        <colgroup>
+          <col className="w-24" />
+        </colgroup>
         <thead>
           <tr>
             <th />
@@ -47,13 +50,15 @@ export function HeatGrid({
         <tbody>
           {heatmap.rows.map((row, i) => (
             <tr key={row}>
-              <th className="whitespace-nowrap pr-2 text-right font-normal text-muted">{rowLabel(row)}</th>
+              <th className="truncate pr-2 text-right font-normal text-muted" title={rowLabel(row)}>
+                {rowLabel(row)}
+              </th>
               {heatmap.columns.map((col, j) => {
                 const v = heatmap.values[i]?.[j] ?? 0;
                 return (
                   <td
                     key={col}
-                    className="h-5 min-w-5 rounded-sm"
+                    className="h-5 rounded-sm"
                     style={{ background: level(v, max) }}
                     title={`${rowLabel(row)} · ${columnLabel(col)}: ${format(v)}`}
                     onMouseEnter={() => setHover(`${rowLabel(row)} · ${columnLabel(col)}: ${format(v)}`)}

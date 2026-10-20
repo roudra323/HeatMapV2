@@ -72,6 +72,12 @@ def test_clusters_separate_distinct_behaviours() -> None:
     assert all(result.profiles.values())
 
 
+def test_cluster_size_scales_down_for_small_populations() -> None:
+    rows = population(30)
+    result = cluster_wallets(build_matrix([f"w{i}" for i in range(30)], rows), min_cluster_size=50)
+    assert len(result.profiles) >= 2
+
+
 def test_small_population_falls_back_to_single_cluster() -> None:
     result = cluster_wallets(build_matrix(["a", "b"], population(2)), min_cluster_size=5)
     assert {a.cluster for a in result.assignments} == {0}

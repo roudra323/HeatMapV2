@@ -60,7 +60,7 @@ def test_transfer_rules() -> None:
     airdrop_token = addr(0xD0)
     transfers = [
         info(1, wallet, real, amount=100),  # genuine payment
-        info(2, wallet, addr(9), amount=0),  # wallet's own zero transfer: allowed
+        info(2, wallet, addr(9), amount=0),  # transferFrom(victim, ..., 0): sender is the victim
         info(3, addr(9), wallet, amount=0),  # poisoning transferFrom
         info(4, fake, wallet, amount=5, tx="0x2"),  # look-alike of a real counterparty
         info(5, addr(8), wallet, token_address=addr(0xBAD), tx="0x3"),  # spam token
@@ -79,6 +79,7 @@ def test_transfer_rules() -> None:
         config=CONFIG,
     )
     assert reasons == {
+        2: "zero_value",
         3: "zero_value",
         4: "lookalike_address",
         5: "spam_token",

@@ -7,8 +7,10 @@ Token-level rules (a token is spam everywhere):
 
 Transfer-level rules:
 - ``spam_token``: the token is spam.
-- ``zero_value``: fungible transfer of 0 not sent by the tracked wallet
-  (the classic ``transferFrom(victim, attacker, 0)`` poisoning).
+- ``zero_value``: ERC-20 transfer of 0. In the classic poisoning attack the
+  attacker calls ``transferFrom(victim, lookalike, 0)``, so the event's sender
+  is the victim's own wallet; direction therefore cannot clear it. Zero-value
+  native transfers are ordinary contract calls and are kept.
 - ``lookalike_address``: counterparty shares the first and last 4 hex chars
   with an address the wallet really transacted with, but is a different address.
 - ``mass_airdrop``: unverified token sent to many recipients in one transaction.
@@ -115,7 +117,6 @@ def transfer_spam_reasons(
             and not category.is_native
             and not category.is_nft
             and t.raw_amount == 0
-            and t.from_address not in tracked
         ):
             reasons[t.id] = "zero_value"
             continue

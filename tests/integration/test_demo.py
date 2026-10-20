@@ -27,6 +27,15 @@ def test_demo_dataset_produces_expected_behaviours(engine: Engine, session: Sess
     assert summary["seeds"] == 20
     farm_wallet = demo_address(1, 0)
     assert "sybil_suspect" in tags_of(session, farm_wallet)
+    # wallets outside the farm share only spam/poisoning events, which must not link them
+    flagged = session.scalars(
+        select(WalletLabel.address).where(WalletLabel.label == "sybil_suspect")
+    ).all()
+    assert set(flagged) == {demo_address(1, i) for i in range(6)}
+    zero_value = session.scalar(
+        select(func.count()).select_from(Transfer).where(Transfer.spam_reason == "zero_value")
+    )
+    assert zero_value == 20
     assert "nft_trader" in tags_of(session, demo_address(3, 0))
     assert "stablecoin_heavy" in tags_of(session, demo_address(2, 0))
     assert "whale" in tags_of(session, demo_address(5, 0))

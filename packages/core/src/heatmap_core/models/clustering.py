@@ -11,6 +11,7 @@ from sklearn.decomposition import PCA
 from heatmap_core.models.matrix import FeatureMatrix, describe_group
 
 NOISE = -1
+MIN_SIZE = 3
 
 
 @dataclass
@@ -32,11 +33,13 @@ def cluster_wallets(matrix: FeatureMatrix, min_cluster_size: int) -> ClusterResu
     n = len(matrix.addresses)
     if n == 0:
         return ClusterResult([], {})
-    if n < 2 * min_cluster_size:
+    # Small watchlists would be all noise at the configured size, so scale it down.
+    size = max(MIN_SIZE, min(min_cluster_size, n // 5))
+    if n < 2 * size:
         labels = np.zeros(n, dtype=int)
         probabilities = np.ones(n)
     else:
-        model = HDBSCAN(min_cluster_size=min_cluster_size, copy=True)
+        model = HDBSCAN(min_cluster_size=size, copy=True)
         labels = model.fit_predict(matrix.scaled)
         probabilities = model.probabilities_
 

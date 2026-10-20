@@ -13,7 +13,7 @@ export function Panel({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-lg border border-line bg-panel p-4">
+    <section className="min-w-0 rounded-lg border border-line bg-panel p-4">
       {(title || action) && (
         <div className="mb-3 flex items-center justify-between gap-2">
           {title && <h2 className="text-sm font-semibold">{title}</h2>}

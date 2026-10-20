@@ -55,6 +55,11 @@ body {
   color: var(--ink);
 }
 
+/* Grid items default to min-width:auto, which lets wide tables push the page sideways. */
+.grid > * {
+  min-width: 0;
+}
+
 .mono {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
