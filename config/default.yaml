@@ -69,6 +69,8 @@ features:
 
 models:
   version: v1
+  window: all
+  drift_window: 30d
   min_cluster_size: 10
   anomaly_contamination: 0.05
   drift_threshold: 3.0

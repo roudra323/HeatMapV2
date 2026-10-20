@@ -114,6 +114,8 @@ class FeatureConfig(BaseModel):
 
 class ModelConfig(BaseModel):
     version: str = "v1"
+    window: str = Field("all", description="Feature window used for tags, clusters, anomalies")
+    drift_window: str = Field("30d", description="Feature window compared between snapshots")
     min_cluster_size: int = 10
     anomaly_contamination: float = 0.05
     drift_threshold: float = 3.0
