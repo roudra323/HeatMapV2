@@ -1,0 +1,23 @@
+[project]
+name = "heatmap-api"
+version = "0.1.0"
+description = "HTTP API for wallet tracking and behaviour data"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "heatmap-core",
+    "uvicorn[standard]>=0.30",
+]
+
+[project.scripts]
+heatmap-api = "heatmap_api.main:run"
+
+[tool.uv.sources]
+heatmap-core = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/heatmap_api"]

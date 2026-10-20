@@ -1,0 +1,84 @@
+# HeatMap default configuration.
+# Override per environment with HEATMAP_CONFIG_FILES=config/default.yaml,config/prod.yaml
+# or with HEATMAP_* environment variables (nested keys use "__").
+# Secrets are never stored here: each provider key names the env var holding it.
+
+log_level: INFO
+
+providers:
+  alchemy:
+    kind: alchemy
+    priority: 1
+    cooldown_s: 60
+    keys:
+      - { id: alchemy-1, env: ALCHEMY_KEY_1, rps: 20, daily_quota: 1000000 }
+      - { id: alchemy-2, env: ALCHEMY_KEY_2, rps: 20, daily_quota: 1000000 }
+  etherscan:
+    kind: etherscan
+    priority: 2
+    base_url: https://api.etherscan.io/v2/api
+    cooldown_s: 60
+    keys:
+      - { id: etherscan-1, env: ETHERSCAN_KEY_1, rps: 4, daily_quota: 100000 }
+      - { id: etherscan-2, env: ETHERSCAN_KEY_2, rps: 4, daily_quota: 100000 }
+
+chains:
+  ethereum:
+    chain_id: 1
+    providers: [alchemy, etherscan]
+    confirmations: 12
+    reorg_window: 64
+    native_symbol: ETH
+    native_decimals: 18
+    alchemy_network: eth-mainnet
+    explorer_url: https://etherscan.io
+  # Example of adding another EVM chain later:
+  # base:
+  #   chain_id: 8453
+  #   providers: [alchemy, etherscan]
+  #   alchemy_network: base-mainnet
+  #   explorer_url: https://basescan.org
+
+schedules:
+  enabled: true
+  timezone: UTC
+  sync_cron: "0 * * * *"          # pull new transfers for tracked wallets
+  expansion_cron: "30 */6 * * *"  # rebuild edges and discover neighbours
+  features_cron: "0 2 * * *"      # compute behaviour snapshots
+  models_cron: "30 2 * * *"       # tags, clusters, anomalies, drift
+
+expansion:
+  enabled: true
+  max_hops: 1
+  top_n_per_wallet: 15
+  min_interactions: 2
+  window_days: 180
+  hub_degree_threshold: 2000
+  max_total_neighbours: 5000
+
+spam:
+  enabled: true
+  airdrop_min_recipients: 50
+  flag_zero_value: true
+  flag_non_ascii_symbols: true
+
+features:
+  windows: ["7d", "30d", "90d", "all"]
+  min_transfers: 3
+  co_timing_seconds: 120
+
+models:
+  version: v1
+  min_cluster_size: 10
+  anomaly_contamination: 0.05
+  drift_threshold: 3.0
+
+pricing:
+  enabled: true
+  base_url: https://api.coingecko.com/api/v3
+  api_key_env: COINGECKO_API_KEY
+
+api:
+  cors_origins: ["http://localhost:3000"]
+  default_page_size: 50
+  max_page_size: 500

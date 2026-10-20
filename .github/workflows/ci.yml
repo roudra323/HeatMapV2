@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "claude/**"]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: heatmap
+          POSTGRES_PASSWORD: heatmap
+          POSTGRES_DB: heatmap_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U heatmap"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      HEATMAP_TEST_DATABASE_URL: postgresql+psycopg://heatmap:heatmap@localhost:5432/heatmap_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - run: uv python install 3.12
+      - run: uv sync --frozen
+      - name: Lint
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+      - name: Typecheck
+        run: uv run mypy packages/core/src apps/api/src pipelines/src
+      - name: Tests
+        run: uv run pytest -m "not live" --cov=heatmap_core --cov=heatmap_api --cov-report=term
+
