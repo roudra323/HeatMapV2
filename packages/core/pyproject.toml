@@ -19,6 +19,9 @@ dependencies = [
     "tenacity>=9.0",
 ]
 
+[project.scripts]
+heatmap = "heatmap_core.cli:main"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: var(--bg);
+  --color-panel: var(--panel);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-danger: var(--danger);
+  --color-ok: var(--ok);
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+:root {
+  --bg: #f7f7f5;
+  --panel: #ffffff;
+  --line: #e4e4df;
+  --ink: #1b1b18;
+  --muted: #6b6b63;
+  --accent: #c2410c;
+  --accent-soft: #fff1e8;
+  --danger: #b91c1c;
+  --ok: #15803d;
+  --heat-0: #f3f2ee;
+  --heat-1: #fde4cf;
+  --heat-2: #fbb67e;
+  --heat-3: #f2793b;
+  --heat-4: #c2410c;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121211;
+    --panel: #1b1b19;
+    --line: #2d2d29;
+    --ink: #ececea;
+    --muted: #9b9b92;
+    --accent: #fb923c;
+    --accent-soft: #2a1d14;
+    --danger: #f87171;
+    --ok: #4ade80;
+    --heat-0: #222220;
+    --heat-1: #3b2a1e;
+    --heat-2: #7a3f1a;
+    --heat-3: #c2551b;
+    --heat-4: #fb923c;
+  }
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}

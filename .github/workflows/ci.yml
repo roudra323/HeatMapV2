@@ -40,4 +40,28 @@ jobs:
         run: uv run mypy packages/core/src apps/api/src pipelines/src
       - name: Tests
         run: uv run pytest -m "not live" --cov=heatmap_core --cov=heatmap_api --cov-report=term
+      - name: OpenAPI spec is up to date
+        run: |
+          uv run python -m heatmap_api.openapi apps/web/openapi.json
+          git diff --exit-code apps/web/openapi.json
 
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: npm ci
+      - name: Generated API types match openapi.json
+        run: |
+          npm run gen:api
+          git diff --exit-code src/lib/api-types.ts
+      - run: npm run lint
+      - run: npm run build # also generates next-env.d.ts and route types
+      - run: npm run typecheck
