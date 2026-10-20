@@ -1,0 +1,21 @@
+address,symbol,name,decimals,standard,category,price_id
+0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee,ETH,Ether,18,native,native,ethereum
+0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2,WETH,Wrapped Ether,18,erc20,wrapped,weth
+0x2260fac5e5542a773aa44fbcfedf7c193bc2c599,WBTC,Wrapped BTC,8,erc20,wrapped,wrapped-bitcoin
+0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48,USDC,USD Coin,6,erc20,stablecoin,usd-coin
+0xdac17f958d2ee523a2206206994597c13d831ec7,USDT,Tether USD,6,erc20,stablecoin,tether
+0x6b175474e89094c44da98b954eedeac495271d0f,DAI,Dai Stablecoin,18,erc20,stablecoin,dai
+0x4c9edd5852cd905f086c759e8383e09bff1e68b3,USDe,Ethena USDe,18,erc20,stablecoin,ethena-usde
+0x6c3ea9036406852006290770bedfcaba0e23a0e8,PYUSD,PayPal USD,6,erc20,stablecoin,paypal-usd
+0xae7ab96520de3a18e5e111b5eaab095312d7fe84,stETH,Lido Staked Ether,18,erc20,liquid_staking,staked-ether
+0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0,wstETH,Wrapped stETH,18,erc20,liquid_staking,wrapped-steth
+0xae78736cd615f374d3085123a210448e74fc6393,rETH,Rocket Pool ETH,18,erc20,liquid_staking,rocket-pool-eth
+0xbe9895146f7af43049ca1c1ae358b0541ea49704,cbETH,Coinbase Wrapped Staked ETH,18,erc20,liquid_staking,coinbase-wrapped-staked-eth
+0x1f9840a85d5af5bf1d1762f925bdaddc4201f984,UNI,Uniswap,18,erc20,defi,uniswap
+0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9,AAVE,Aave,18,erc20,defi,aave
+0x514910771af9ca656af840dff83e8264ecf986ca,LINK,Chainlink,18,erc20,defi,chainlink
+0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2,MKR,Maker,18,erc20,defi,maker
+0xd533a949740bb3306d119cc777fa900ba034cd52,CRV,Curve DAO Token,18,erc20,defi,curve-dao-token
+0x5a98fcbea516cf06857215779fd812ca3bef1b32,LDO,Lido DAO,18,erc20,defi,lido-dao
+0x6982508145454ce325ddbe47a25d4ec3d2311933,PEPE,Pepe,18,erc20,meme,pepe
+0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce,SHIB,Shiba Inu,18,erc20,meme,shiba-inu

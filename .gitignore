@@ -22,7 +22,7 @@ dagster_home/
 tmp*/
 
 # Data artefacts
-data/
+/data/
 *.parquet
 
 # Node / Next.js
