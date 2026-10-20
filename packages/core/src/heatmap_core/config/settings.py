@@ -57,6 +57,11 @@ class ChainConfig(BaseModel):
     confirmations: int = 12
     reorg_window: int = Field(64, description="Blocks re-scanned on each sync")
     start_block: int = 0
+    sync_block_chunk: int = Field(
+        1_000_000,
+        gt=0,
+        description="Blocks fetched per request range; the cursor commits per chunk",
+    )
     native_symbol: str = "ETH"
     native_decimals: int = 18
     alchemy_network: str | None = None
@@ -124,9 +129,6 @@ class PricingConfig(BaseModel):
     enabled: bool = True
     base_url: str = "https://api.coingecko.com/api/v3"
     api_key_env: str | None = "COINGECKO_API_KEY"
-    stable_usd_symbols: list[str] = Field(
-        default_factory=lambda: ["USDC", "USDT", "DAI", "USDS", "PYUSD", "FDUSD", "TUSD"]
-    )
 
 
 class Settings(BaseSettings):

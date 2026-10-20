@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import BigInteger, Boolean, Date, Index, Integer, String, func
+from sqlalchemy import BigInteger, Boolean, Date, Index, Integer, String, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from heatmap_core.db.base import Address, Base, TimestampMixin, TokenAmount, Uint256, Usd
@@ -52,6 +52,9 @@ class Transfer(Base):
     spam_reason: Mapped[str | None] = mapped_column(String(128))
     provider: Mapped[str] = mapped_column(String(32))
     ingested_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    normalized_at: Mapped[datetime | None] = mapped_column(
+        comment="Set once amounts, USD value and spam flags are computed"
+    )
 
     __table_args__ = (
         Index("uq_transfers_chain_uid", "chain_id", "uid", unique=True),
@@ -60,6 +63,12 @@ class Transfer(Base):
         Index("ix_transfers_tx", "chain_id", "tx_hash"),
         Index("ix_transfers_token", "chain_id", "token_address"),
         Index("ix_transfers_block", "chain_id", "block_number"),
+        Index(
+            "ix_transfers_pending_normalize",
+            "chain_id",
+            "id",
+            postgresql_where=text("normalized_at IS NULL"),
+        ),
     )
 
 

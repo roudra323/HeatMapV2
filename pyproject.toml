@@ -38,10 +38,10 @@ extend-exclude = ["apps/web"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "N", "PL", "TID"]
-ignore = ["PLR0913", "PLR2004", "PLR0911", "PLR0912", "PLR0915", "RUF012"]
+ignore = ["PLR0913", "PLR0917", "PLR2004", "PLR0911", "PLR0912", "PLR0915", "RUF012"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["PLR2004", "S101"]
+"tests/**" = ["PLR2004", "S101", "RUF001"]  # spam tests use homoglyphs on purpose
 "**/migrations/versions/*.py" = ["E501"]
 
 [tool.ruff.lint.isort]
