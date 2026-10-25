@@ -13,6 +13,12 @@ export type SimilarWallet = Schemas["SimilarWalletOut"];
 export type TransferPage = Schemas["Page_TransferOut_"];
 export type Cluster = Schemas["ClusterOut"];
 export type ClusterPoint = Schemas["ClusterPointOut"];
+export type Trader = Schemas["TraderOut"];
+export type TraderPage = Schemas["Page_TraderOut_"];
+export type Trade = Schemas["TradeOut"];
+export type TradePage = Schemas["Page_TradeOut_"];
+export type Chain = Schemas["ChainOut"];
+export type WatchOrigin = Schemas["WatchOrigin"];
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -36,11 +42,16 @@ function url(path: string, query?: Query): string {
 }
 
 async function request<T>(method: string, path: string, query?: Query, body?: unknown): Promise<T> {
-  const res = await fetch(url(path, query), {
-    method,
-    headers: body ? { "Content-Type": "application/json" } : undefined,
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  let res: Response;
+  try {
+    res = await fetch(url(path, query), {
+      method,
+      headers: body ? { "Content-Type": "application/json" } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    throw new ApiError(0, `Can't reach the HeatMap API at ${API_URL}. Check that it is running.`);
+  }
   if (!res.ok) {
     const detail = await res
       .json()

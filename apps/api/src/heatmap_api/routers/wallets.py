@@ -17,9 +17,11 @@ from heatmap_api.schemas import (
     Page,
     SimilarWalletOut,
     TimelineBucketOut,
+    TradeOut,
     TransferOut,
     WalletProfileOut,
 )
+from heatmap_core.exports.dex import wallet_trades
 from heatmap_core.exports.heatmaps import wallet_activity_heatmap
 from heatmap_core.exports.read_models import (
     similar_wallets,
@@ -102,6 +104,24 @@ def get_transfers(
         limit=limit,
         offset=offset,
         items=[TransferOut.model_validate(r) for r in rows],
+    )
+
+
+@router.get("/{address}/trades", response_model=Page[TradeOut])
+def get_trades(
+    address: AddressDep,
+    session: SessionDep,
+    chain: ChainDep,
+    limit: LimitDep,
+    offset: OffsetDep = 0,
+) -> Page[TradeOut]:
+    """DEX swaps this wallet signed, newest first."""
+    total, rows = wallet_trades(session, chain.chain_id, address, limit=limit, offset=offset)
+    return Page(
+        total=total,
+        limit=limit,
+        offset=offset,
+        items=[TradeOut(**r.__dict__) for r in rows],
     )
 
 

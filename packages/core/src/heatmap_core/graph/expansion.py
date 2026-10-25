@@ -25,14 +25,18 @@ COUNTERPARTY_SQL = text(
         SELECT from_address AS wallet, to_address AS counterparty, amount_usd
         FROM transfers
         WHERE chain_id = :chain_id AND from_address = ANY(:wallets)
-          AND NOT is_spam AND block_time >= :since
+          AND NOT is_spam AND normalized_at IS NOT NULL AND block_time >= :since
         UNION ALL
         SELECT to_address, from_address, amount_usd
         FROM transfers
         WHERE chain_id = :chain_id AND to_address = ANY(:wallets)
-          AND NOT is_spam AND block_time >= :since
+          AND NOT is_spam AND normalized_at IS NOT NULL AND block_time >= :since
     ) AS sides
     WHERE wallet <> counterparty
+      AND NOT EXISTS (  -- known contracts are not people; unknown ones are vetted before sync
+          SELECT 1 FROM wallets w
+          WHERE w.chain_id = :chain_id AND w.address = sides.counterparty AND w.kind = 'contract'
+      )
     GROUP BY wallet, counterparty
     HAVING COUNT(*) >= :min_interactions
     """
@@ -69,8 +73,10 @@ def expand_neighbours(
     """Add the strongest non-hub counterparties of watched wallets to the watchlist.
 
     Runs one hop per call: wallets at hop ``h < max_hops`` contribute neighbours
-    at hop ``h + 1``. Neighbours added now are synced by the next sync run and
-    can expand further on the next expansion run.
+    at hop ``h + 1``. Neighbours added now are vetted and synced by the next
+    sync run and can expand further on the next expansion run. A neighbour the
+    vetting rejects stays on the watchlist, inactive, so the next run gives its
+    place to the next strongest counterparty.
     """
     cfg = settings.expansion
     result = ExpansionResult()
@@ -95,6 +101,7 @@ def expand_neighbours(
                 .where(
                     WatchlistEntry.chain_id == chain_id,
                     WatchlistEntry.origin == WatchOrigin.NEIGHBOUR,
+                    WatchlistEntry.active.is_(True),
                 )
             )
             or 0

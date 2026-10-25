@@ -1,8 +1,8 @@
-from sqlalchemy import Engine, select
+from sqlalchemy import Engine, select, update
 from sqlalchemy.orm import Session
 
 from heatmap_core.config import Settings
-from heatmap_core.db.models import Edge, WalletCommunity, WatchlistEntry
+from heatmap_core.db.models import DexPool, Edge, Wallet, WalletCommunity, WatchlistEntry
 from heatmap_core.db.session import session_scope
 from heatmap_core.entities.labels import load_seed_labels, load_seed_tokens
 from heatmap_core.graph.communities import detect_communities
@@ -10,7 +10,7 @@ from heatmap_core.graph.edges import rebuild_edges
 from heatmap_core.graph.ego import ego_network
 from heatmap_core.graph.expansion import expand_neighbours
 from heatmap_core.ingestion.sync import sync_wallet
-from heatmap_core.ingestion.watchlist import active_addresses, add_seed
+from heatmap_core.ingestion.watchlist import active_addresses, add_seed, deactivate
 from heatmap_core.normalize.run import normalize_pending
 from heatmap_core.primitives import TransferCategory
 from tests.support import FakeSource, addr, ethereum, raw
@@ -143,3 +143,41 @@ def test_ego_network_and_communities(engine: Engine, session: Session) -> None:
     assert nodes[A].tracked and nodes[A].hop == 1
     assert nodes[D].depth == 2
     assert {(e.src, e.dst) for e in network.edges} >= {(SEED, A), (A, D)}
+
+
+def test_expansion_skips_dex_pools_and_known_contracts(engine: Engine, session: Session) -> None:
+    setup(engine)
+    cfg = settings()
+    run_pipeline(engine, scenario(), cfg)
+    with session_scope(engine) as s:
+        s.add(DexPool(chain_id=1, pool_id=A, protocol="uniswap_v2", verified=True))
+        s.execute(update(Wallet).where(Wallet.address == B).values(kind="contract"))
+
+    result = expand_neighbours(engine, ethereum(), cfg)
+
+    assert result.added == [] and A in result.skipped_hubs
+
+
+def test_rejected_neighbours_free_their_place(engine: Engine) -> None:
+    setup(engine)
+    cfg = settings(max_total_neighbours=1)
+    run_pipeline(engine, scenario(), cfg)
+    assert expand_neighbours(engine, ethereum(), cfg).added == [A]
+
+    with session_scope(engine) as s:
+        deactivate(s, 1, A)  # e.g. rejected by the sync vetting
+    assert expand_neighbours(engine, ethereum(), cfg).added == [B]
+
+
+def test_communities_leave_out_excluded_addresses(engine: Engine, session: Session) -> None:
+    setup(engine)
+    cfg = settings()
+    source = scenario()
+    run_pipeline(engine, source, cfg)
+    expand_neighbours(engine, ethereum(), cfg)
+    run_pipeline(engine, source, cfg)  # syncs A, whose transfers to D add the A - D edge
+
+    assert detect_communities(engine, 1, exclude={SEED}) == 1  # only A - D is left
+
+    assert session.get(WalletCommunity, (1, SEED)) is None
+    assert session.get(WalletCommunity, (1, A)) is not None

@@ -24,6 +24,9 @@ class Wallet(TimestampMixin, Base):
     funded_by: Mapped[str | None] = mapped_column(
         String(42), comment="Sender of the first inbound native transfer"
     )
+    sent_txs: Mapped[int | None] = mapped_column(
+        BigInteger, comment="Transactions sent (the nonce) when checked before automatic tracking"
+    )
 
 
 class WatchlistEntry(TimestampMixin, Base):

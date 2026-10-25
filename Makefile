@@ -28,7 +28,7 @@ api:
 	uv run uvicorn heatmap_api.main:app --reload --port 8000
 
 dagster:
-	uv run dagster dev -m heatmap_pipelines.definitions
+	uv run dagster dev -m heatmap_pipelines.definitions -p 3001
 
 web:
 	cd apps/web && npm run dev

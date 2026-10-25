@@ -13,7 +13,7 @@ from heatmap_core.db.models import WalletFeatureSnapshot, WatchlistEntry
 from heatmap_core.db.session import session_scope
 from heatmap_core.ingestion.watchlist import add_seed
 from heatmap_pipelines import jobs
-from heatmap_pipelines.assets import ALL_ASSETS
+from heatmap_pipelines.assets import ALL_ASSETS, SCOPE_NEW, SCOPE_TAG
 from heatmap_pipelines.jobs import build_schedules, build_sensors
 from heatmap_pipelines.resources import HeatmapResource
 from tests.support import FakeSource, addr, raw
@@ -33,6 +33,7 @@ def make_resource(engine: Engine, source: FakeSource) -> HeatmapResource:
                 expansion={"min_interactions": 1, "window_days": 100_000},
                 features={"min_transfers": 1},
                 pricing={"enabled": False},
+                discovery={"enabled": False},  # covered by test_discovery
             )
 
         @contextmanager
@@ -82,6 +83,21 @@ def test_schedules_follow_config() -> None:
     assert [r.partition_key for r in requests] == ["ethereum"]
 
 
+def test_models_run_inside_the_features_job() -> None:
+    schedules = build_schedules(Settings(chains={"ethereum": {"chain_id": 1}}))
+    assert {s.name for s in schedules} == {
+        "discovery_job_schedule",
+        "sync_job_schedule",
+        "expansion_job_schedule",
+        "features_job_schedule",
+    }
+    repo = dg.Definitions(
+        assets=ALL_ASSETS, jobs=jobs.JOBS, resources={"heatmap": HeatmapResource()}
+    ).get_repository_def()
+    selected = repo.get_job("features_job").asset_layer.executable_asset_keys
+    assert {k.to_user_string() for k in selected} == {"wallet_features", "wallet_labels"}
+
+
 def test_sensor_requests_sync_for_unsynced_wallets(
     engine: Engine, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -95,3 +111,4 @@ def test_sensor_requests_sync_for_unsynced_wallets(
     context = dg.build_sensor_context(repository_def=repo)
     requests = list(sensor.evaluate_tick(context).run_requests or [])
     assert [r.partition_key for r in requests] == ["ethereum"]
+    assert requests[0].tags[SCOPE_TAG] == SCOPE_NEW  # only the new wallets are synced

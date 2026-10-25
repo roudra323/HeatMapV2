@@ -11,7 +11,7 @@ from sqlalchemy import Engine
 
 from heatmap_core.config import Chain, ChainRegistry, Settings, get_settings
 from heatmap_core.db.session import get_engine
-from heatmap_core.normalize.pricing import CoinGeckoPrices, PriceSource
+from heatmap_core.normalize.pricing import PriceSource, make_price_source
 from heatmap_core.providers.router import ProviderRouter
 from heatmap_core.providers.usage_store import SqlUsageStore
 
@@ -39,6 +39,4 @@ class HeatmapResource(dg.ConfigurableResource):  # type: ignore[type-arg]
             store.flush()
 
     def prices(self) -> PriceSource | None:
-        if not self.settings.pricing.enabled:
-            return None
-        return CoinGeckoPrices(self.settings.pricing)
+        return make_price_source(self.settings.pricing)

@@ -2,14 +2,19 @@
 
 from __future__ import annotations
 
+import hashlib
+import time
 from collections.abc import Iterator
 
 import dagster as dg
-from sqlalchemy import text
 
 from heatmap_core.config import ChainRegistry, Settings
-from heatmap_core.db.session import get_engine
+from heatmap_core.db.session import get_engine, session_scope
+from heatmap_core.ingestion.watchlist import unsynced_addresses
 from heatmap_pipelines.assets import (
+    SCOPE_NEW,
+    SCOPE_TAG,
+    dex_traders,
     normalized_transfers,
     raw_transfers,
     reference_data,
@@ -18,6 +23,11 @@ from heatmap_pipelines.assets import (
     wallet_labels,
 )
 
+discovery_job = dg.define_asset_job(
+    "discovery_job",
+    selection=dg.AssetSelection.assets(dex_traders),
+    description="Scan DEX trades, score traders, promote the best to the watchlist",
+)
 sync_job = dg.define_asset_job(
     "sync_job",
     selection=dg.AssetSelection.assets(reference_data, raw_transfers, normalized_transfers),
@@ -30,11 +40,13 @@ expansion_job = dg.define_asset_job(
 )
 features_job = dg.define_asset_job(
     "features_job",
-    selection=dg.AssetSelection.assets(wallet_features),
+    selection=dg.AssetSelection.assets(wallet_features, wallet_labels),
+    description="Behaviour snapshot, then tags, clusters, anomalies and drift on it",
 )
 models_job = dg.define_asset_job(
     "models_job",
     selection=dg.AssetSelection.assets(wallet_labels),
+    description="Re-label the latest snapshot (not scheduled; features_job runs models)",
 )
 full_refresh_job = dg.define_asset_job(
     "full_refresh_job",
@@ -42,7 +54,7 @@ full_refresh_job = dg.define_asset_job(
     description="Every stage in order",
 )
 
-JOBS = [sync_job, expansion_job, features_job, models_job, full_refresh_job]
+JOBS = [discovery_job, sync_job, expansion_job, features_job, models_job, full_refresh_job]
 
 
 def _per_chain(settings: Settings) -> list[str]:
@@ -56,10 +68,10 @@ def build_schedules(settings: Settings) -> list[dg.ScheduleDefinition]:
     chain_names = _per_chain(settings)
     schedules = []
     for job, cron in (
+        (discovery_job, cfg.discovery_cron),
         (sync_job, cfg.sync_cron),
         (expansion_job, cfg.expansion_cron),
         (features_job, cfg.features_cron),
-        (models_job, cfg.models_cron),
     ):
 
         def evaluate(
@@ -82,14 +94,9 @@ def build_schedules(settings: Settings) -> list[dg.ScheduleDefinition]:
     return schedules
 
 
-NEW_SEEDS_SQL = text(
-    """
-    SELECT w.address FROM watchlist w
-    LEFT JOIN sync_cursors c ON c.chain_id = w.chain_id AND c.address = w.address
-    WHERE w.chain_id = :chain_id AND w.active AND c.address IS NULL
-    ORDER BY w.address
-    """
-)
+# A wallet still unsynced after this long (its run was skipped because another
+# sync held the lock) is requested again.
+RETRY_SECONDS = 600
 
 
 def build_sensors(settings: Settings) -> list[dg.SensorDefinition]:
@@ -99,13 +106,20 @@ def build_sensors(settings: Settings) -> list[dg.SensorDefinition]:
         job=sync_job, minimum_interval_seconds=60, default_status=dg.DefaultSensorStatus.RUNNING
     )
     def new_watchlist_wallets(context: dg.SensorEvaluationContext) -> Iterator[dg.RunRequest]:
-        """Sync wallets added to the watchlist (e.g. via the API) without waiting for the cron."""
-        engine = get_engine()
-        with engine.connect() as conn:
-            for chain in chain_list:
-                pending = list(conn.execute(NEW_SEEDS_SQL, {"chain_id": chain.chain_id}).scalars())
-                if pending:
-                    key = f"{chain.name}:{','.join(pending)}"
-                    yield dg.RunRequest(run_key=key[:500], partition_key=chain.name)
+        """Sync wallets added to the watchlist (e.g. via the API) without waiting for the cron.
+
+        The run syncs only never-synced wallets, not the whole watchlist.
+        """
+        window = int(time.time()) // RETRY_SECONDS
+        with session_scope(get_engine()) as session:
+            pending = {c.name: unsynced_addresses(session, c.chain_id) for c in chain_list}
+        for chain_name, addresses in pending.items():
+            if addresses:
+                digest = hashlib.sha256(",".join(addresses).encode()).hexdigest()[:16]
+                yield dg.RunRequest(
+                    run_key=f"{chain_name}:{digest}:{window}",
+                    partition_key=chain_name,
+                    tags={SCOPE_TAG: SCOPE_NEW},
+                )
 
     return [new_watchlist_wallets]

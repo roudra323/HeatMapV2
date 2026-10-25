@@ -13,72 +13,84 @@ function level(value: number, max: number): string {
   return LEVELS[idx]!;
 }
 
-/** Generic matrix heatmap: rows × columns with a five-step sequential scale. */
+/** Rows × columns on a single-hue heat scale. Hover or focus a cell to read its value. */
 export function HeatGrid({
   heatmap,
   format = (v) => String(v),
   rowLabel = (r) => r,
   columnLabel = (c) => humanize(c),
+  compact = false,
 }: {
   heatmap: Heatmap;
   format?: (v: number) => string;
   rowLabel?: (r: string) => string;
   columnLabel?: (c: string) => string;
+  /** Short column labels (hours) instead of rotated category names. */
+  compact?: boolean;
 }) {
   const [hover, setHover] = useState<string>();
   const max = Math.max(0, ...heatmap.values.flat());
   if (heatmap.rows.length === 0) return <p className="text-sm text-muted">No data yet.</p>;
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-96 table-fixed border-separate border-spacing-0.5 text-xs">
-        <colgroup>
-          <col className="w-24" />
-        </colgroup>
-        <thead>
-          <tr>
-            <th />
-            {heatmap.columns.map((c) => (
-              <th key={c} className="px-0.5 align-bottom font-normal text-muted">
-                <div className="max-h-24 whitespace-nowrap [writing-mode:vertical-rl] rotate-180">
-                  {columnLabel(c)}
-                </div>
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {heatmap.rows.map((row, i) => (
-            <tr key={row}>
-              <th className="truncate pr-2 text-right font-normal text-muted" title={rowLabel(row)}>
-                {rowLabel(row)}
-              </th>
-              {heatmap.columns.map((col, j) => {
-                const v = heatmap.values[i]?.[j] ?? 0;
-                return (
-                  <td
-                    key={col}
-                    className="h-5 rounded-sm"
-                    style={{ background: level(v, max) }}
-                    title={`${rowLabel(row)} · ${columnLabel(col)}: ${format(v)}`}
-                    onMouseEnter={() => setHover(`${rowLabel(row)} · ${columnLabel(col)}: ${format(v)}`)}
-                    onMouseLeave={() => setHover(undefined)}
-                  />
-                );
-              })}
+    <div>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[22rem] table-fixed border-separate border-spacing-[2px] text-xs">
+          <colgroup>
+            <col className={compact ? "w-10" : "w-28"} />
+          </colgroup>
+          <thead>
+            <tr>
+              <td />
+              {heatmap.columns.map((c, j) => (
+                <th key={c} scope="col" className="px-0 pb-1 align-bottom font-normal text-muted">
+                  {compact ? (
+                    <span className={`num block text-center text-[0.6875rem] ${j % 3 === 0 ? "" : "invisible"}`}>{columnLabel(c)}</span>
+                  ) : (
+                    <span className="mx-auto block max-h-28 rotate-180 whitespace-nowrap [writing-mode:vertical-rl]">{columnLabel(c)}</span>
+                  )}
+                </th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
-      <div className="mt-2 flex items-center gap-3 text-xs text-muted">
+          </thead>
+          <tbody>
+            {heatmap.rows.map((row, i) => (
+              <tr key={row}>
+                <th scope="row" className="truncate pr-2 text-right font-normal text-muted" title={rowLabel(row)}>
+                  {rowLabel(row)}
+                </th>
+                {heatmap.columns.map((col, j) => {
+                  const v = heatmap.values[i]?.[j] ?? 0;
+                  const text = `${rowLabel(row)}, ${columnLabel(col)}: ${format(v)}`;
+                  return (
+                    <td
+                      key={col}
+                      className={`${compact ? "h-5" : "h-6"} rounded-[3px] p-0`}
+                      style={{ background: level(v, max) }}
+                      title={text}
+                      onMouseEnter={() => setHover(text)}
+                      onMouseLeave={() => setHover(undefined)}
+                    >
+                      <span className="sr-only">{format(v)}</span>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
         <span className="flex items-center gap-1">
-          less
+          Less
           {LEVELS.map((l) => (
-            <span key={l} className="inline-block h-3 w-3 rounded-sm" style={{ background: l }} />
+            <span key={l} className="inline-block h-3 w-3 rounded-[3px]" style={{ background: l }} />
           ))}
-          more
+          More
         </span>
-        <span className="mono">{hover ?? " "}</span>
+        <span className="num min-h-4 text-ink" aria-live="polite">
+          {hover ?? ""}
+        </span>
       </div>
     </div>
   );

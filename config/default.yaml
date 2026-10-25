@@ -31,7 +31,11 @@ chains:
     native_symbol: ETH
     native_decimals: 18
     alchemy_network: eth-mainnet
+    defillama_chain: ethereum
     explorer_url: https://etherscan.io
+    wrapped_native: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"   # WETH
+    uniswap_v4_pool_manager: "0x000000000004444c5dc75cb358380d2e3de08a90"
+    uniswap_v4_position_manager: "0xbd216513d74c8cf14cf4747e6aaa6420ff64ee9e"
   # Example of adding another EVM chain later:
   # base:
   #   chain_id: 8453
@@ -43,9 +47,28 @@ schedules:
   enabled: true
   timezone: UTC
   sync_cron: "0 * * * *"          # pull new transfers for tracked wallets
+  discovery_cron: "*/10 * * * *"  # scan new DEX trades, score traders, promote the best
   expansion_cron: "30 */6 * * *"  # rebuild edges and discover neighbours
-  features_cron: "0 2 * * *"      # compute behaviour snapshots
-  models_cron: "30 2 * * *"       # tags, clusters, anomalies, drift
+  features_cron: "0 2 * * *"      # behaviour snapshots, then tags, clusters, anomalies, drift
+
+discovery:
+  enabled: true
+  backfill_blocks: 7200           # ~1 day on the first run
+  max_blocks_per_run: 1800        # ~6 hours of blocks per run at most
+  logs_block_range: 10            # Alchemy free tier allows 10 blocks per eth_getLogs
+  window_days: 30
+  min_router_signers: 10           # unlabelled contracts need this many distinct signers...
+  max_router_txs_per_signer: 5    # ...each trading this often or less, to count as public routers
+  bot_tx_per_day: 100             # bot signals: trades per active day,
+  bot_swaps_per_tx: 6             #   swaps packed into one transaction (solvers),
+  bot_arbitrage_share: 0.3        #   share of circular arbitrage transactions
+  promote:
+    enabled: true
+    min_volume_usd: 5000
+    min_trades: 3
+    min_active_days: 2
+    max_per_run: 25
+    max_total: 500                # tracked at once; rejected or removed traders free their place
 
 expansion:
   enabled: true
@@ -54,7 +77,16 @@ expansion:
   min_interactions: 2
   window_days: 180
   hub_degree_threshold: 2000
-  max_total_neighbours: 5000
+  max_total_neighbours: 5000      # tracked at once; neighbours rejected below free their place
+
+tracking:
+  # Wallets added automatically (DEX traders, neighbours) are checked once,
+  # before their first sync, with eth_getCode and eth_getTransactionCount.
+  # Contracts, and wallets that sent more transactions than this, are not
+  # tracked: they are pools, protocols, exchanges, payout services or bots,
+  # and one of them can hold millions of transfers. Wallets added by hand are
+  # never checked.
+  max_sent_txs: 10000
 
 spam:
   enabled: true
@@ -77,8 +109,12 @@ models:
 
 pricing:
   enabled: true
-  base_url: https://api.coingecko.com/api/v3
-  api_key_env: COINGECKO_API_KEY
+  # defillama: free, no key, prices any token by contract address.
+  # coingecko: only tokens with a price_id in tokens_<chain>.csv.
+  source: defillama
+  defillama_url: https://coins.llama.fi
+  coingecko_url: https://api.coingecko.com/api/v3
+  coingecko_api_key_env: COINGECKO_API_KEY
 
 api:
   cors_origins: ["http://localhost:3000"]

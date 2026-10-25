@@ -109,14 +109,39 @@ class AlchemyProvider:
     def get_code(self, key: str, chain: Chain, address: str) -> str:
         return str(self._rpc(key, chain, "eth_getCode", [address, "latest"]))
 
+    def get_transaction_count(self, key: str, chain: Chain, address: str) -> int:
+        return int(self._rpc(key, chain, "eth_getTransactionCount", [address, "latest"]), 16)
+
+    def get_logs(
+        self, key: str, chain: Chain, from_block: int, to_block: int, topics: list[Any]
+    ) -> list[dict[str, Any]]:
+        params = {"fromBlock": hex(from_block), "toBlock": hex(to_block), "topics": topics}
+        result = self._rpc(key, chain, "eth_getLogs", [params])
+        if not isinstance(result, list):
+            raise TransientProviderError("eth_getLogs returned no list")
+        return result
+
+    def get_block(self, key: str, chain: Chain, number: int) -> dict[str, Any]:
+        result = self._rpc(key, chain, "eth_getBlockByNumber", [hex(number), True])
+        if not isinstance(result, dict):
+            raise TransientProviderError(f"block {number} not available yet")
+        return result
+
+    def eth_call(self, key: str, chain: Chain, to: str, data: str) -> str:
+        return str(self._rpc(key, chain, "eth_call", [{"to": to, "data": data}, "latest"]))
+
 
 def _map_rpc_error(error: Any) -> Exception:
     code = error.get("code") if isinstance(error, dict) else None
     message = str(error.get("message", error) if isinstance(error, dict) else error)
     lowered = message.lower()
+    # The per-second limit says "compute units per second capacity", so check it
+    # before the monthly "capacity limit" or the key is benched for the whole day.
+    if "per second" in lowered or "rate limit" in lowered or "throughput" in lowered:
+        return RateLimitedError(message)
     if "capacity" in lowered or "monthly" in lowered or "quota" in lowered:
         return QuotaExceededError(message)
-    if code == 429 or "rate limit" in lowered or "throughput" in lowered:
+    if code == 429:
         return RateLimitedError(message)
     if code in (401, 403) or "api key" in lowered or "unauthorized" in lowered:
         return AuthError(message)

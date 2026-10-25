@@ -137,9 +137,29 @@ def test_self_transfer_not_duplicated_in_second_direction() -> None:
             ),
             QuotaExceededError,
         ),
+        (
+            httpx.Response(
+                200,
+                json={
+                    "error": {
+                        "code": 429,
+                        "message": "Your app has exceeded its compute units per second capacity.",
+                    }
+                },
+            ),
+            RateLimitedError,
+        ),
     ],
 )
 def test_error_mapping(response: httpx.Response, error: type[Exception]) -> None:
     respx.post(URL).mock(return_value=response)
     with pytest.raises(error):
         AlchemyProvider(httpx.Client()).fetch_transfers_page("k1", request())
+
+
+@respx.mock
+def test_transaction_count() -> None:
+    route = respx.post(URL).mock(return_value=httpx.Response(200, json={"result": "0x2710"}))
+    assert AlchemyProvider(httpx.Client()).get_transaction_count("k1", ethereum(), WALLET) == 10_000
+    body = json.loads(route.calls.last.request.content)
+    assert (body["method"], body["params"]) == ("eth_getTransactionCount", [WALLET, "latest"])

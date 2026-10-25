@@ -7,7 +7,7 @@ from datetime import UTC, datetime, timedelta
 
 from heatmap_core.config import Chain, ChainConfig
 from heatmap_core.primitives import NATIVE_TOKEN, TransferCategory
-from heatmap_core.providers import RawTransfer, assign_uids
+from heatmap_core.providers import RawTransfer, TransientProviderError, assign_uids
 
 
 class FakeClock:
@@ -59,6 +59,10 @@ class FakeSource:
         self.head = head
         self.calls: list[tuple[str, int, int]] = []
         self.contracts: set[str] = set()
+        self.codes: dict[str, str] = {}  # raw eth_getCode answers, e.g. EIP-7702 delegations
+        self.sent: dict[str, int] = {}  # eth_getTransactionCount answers (default 0)
+        self.checked: list[str] = []  # addresses asked for their transaction count
+        self.down = False  # provider outage for code and nonce lookups
 
     def fetch_transfers(
         self, chain: Chain, address: str, from_block: int, to_block: int
@@ -76,7 +80,17 @@ class FakeSource:
         return self.head
 
     def get_code(self, chain: Chain, address: str) -> str:
+        if self.down:
+            raise TransientProviderError("provider down")
+        if address in self.codes:
+            return self.codes[address]
         return "0x6080" if address in self.contracts else "0x"
+
+    def get_transaction_count(self, chain: Chain, address: str) -> int:
+        if self.down:
+            raise TransientProviderError("provider down")
+        self.checked.append(address)
+        return self.sent.get(address, 0)
 
 
 def raw(

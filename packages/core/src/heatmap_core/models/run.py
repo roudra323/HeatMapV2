@@ -30,6 +30,7 @@ class ModelRunResult:
     clusters: int = 0
     anomalies: int = 0
     drifted: int = 0
+    skipped: bool = False
 
 
 def load_snapshot(

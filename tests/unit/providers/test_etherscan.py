@@ -146,3 +146,19 @@ def test_latest_block_via_proxy() -> None:
         return_value=httpx.Response(200, json={"jsonrpc": "2.0", "id": 1, "result": "0x10"})
     )
     assert EtherscanProvider(httpx.Client()).latest_block("k1", ethereum()) == 16
+
+
+@respx.mock
+def test_transaction_count_via_proxy() -> None:
+    route = respx.get(URL).mock(
+        return_value=httpx.Response(200, json={"jsonrpc": "2.0", "id": 1, "result": "0x2710"})
+    )
+    assert EtherscanProvider(httpx.Client()).get_transaction_count("k1", ethereum(), WALLET) == (
+        10_000
+    )
+    params = route.calls.last.request.url.params
+    assert (params["action"], params["address"], params["tag"]) == (
+        "eth_getTransactionCount",
+        WALLET,
+        "latest",
+    )

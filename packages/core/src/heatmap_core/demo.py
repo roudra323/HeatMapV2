@@ -15,6 +15,7 @@ from sqlalchemy import Engine
 
 from heatmap_core import pipeline
 from heatmap_core.config import Chain, Settings
+from heatmap_core.db.models import Token
 from heatmap_core.db.session import session_scope
 from heatmap_core.ingestion.watchlist import add_seed
 from heatmap_core.primitives import NATIVE_TOKEN, TransferCategory
@@ -71,9 +72,15 @@ class StaticSource:
         contracts = {UNISWAP, SEAPORT, AAVE, USDC, USDT, WETH, PEPE, NFT_COLLECTION, FAKE_USDT}
         return "0x6080" if address in contracts else "0x"
 
+    def get_transaction_count(self, chain: Chain, address: str) -> int:
+        return sum(t.from_address == address for t in self.transfers)
+
 
 class StaticPrices:
     name = "demo"
+
+    def price_key(self, chain: Chain, token: Token) -> str | None:
+        return token.price_id
 
     def daily_prices(self, price_id: str, start: date, end: date) -> dict[date, Decimal]:
         price = {"ethereum": 3000.0, "weth": 3000.0, "pepe": 0.00001}.get(price_id)

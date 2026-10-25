@@ -476,6 +476,68 @@
         "title": "NodeOut",
         "type": "object"
       },
+      "Page_TradeOut_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TradeOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "limit",
+          "offset",
+          "items"
+        ],
+        "title": "Page[TradeOut]",
+        "type": "object"
+      },
+      "Page_TraderOut_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TraderOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "limit",
+          "offset",
+          "items"
+        ],
+        "title": "Page[TraderOut]",
+        "type": "object"
+      },
       "Page_TransferOut_": {
         "properties": {
           "items": {
@@ -615,6 +677,291 @@
           "counterparties"
         ],
         "title": "TimelineBucketOut",
+        "type": "object"
+      },
+      "TopTokenOut": {
+        "properties": {
+          "symbol": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Symbol"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          },
+          "trades": {
+            "title": "Trades",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "token",
+          "symbol",
+          "trades"
+        ],
+        "title": "TopTokenOut",
+        "type": "object"
+      },
+      "TradeOut": {
+        "properties": {
+          "amount_in": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount In"
+          },
+          "amount_out": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Out"
+          },
+          "amount_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Usd"
+          },
+          "block_number": {
+            "title": "Block Number",
+            "type": "integer"
+          },
+          "block_time": {
+            "format": "date-time",
+            "title": "Block Time",
+            "type": "string"
+          },
+          "log_index": {
+            "title": "Log Index",
+            "type": "integer"
+          },
+          "pool_id": {
+            "title": "Pool Id",
+            "type": "string"
+          },
+          "protocol": {
+            "title": "Protocol",
+            "type": "string"
+          },
+          "token_in": {
+            "title": "Token In",
+            "type": "string"
+          },
+          "token_in_symbol": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token In Symbol"
+          },
+          "token_out": {
+            "title": "Token Out",
+            "type": "string"
+          },
+          "token_out_symbol": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token Out Symbol"
+          },
+          "tx_hash": {
+            "title": "Tx Hash",
+            "type": "string"
+          },
+          "tx_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tx To"
+          }
+        },
+        "required": [
+          "tx_hash",
+          "block_number",
+          "block_time",
+          "log_index",
+          "protocol",
+          "pool_id",
+          "tx_to",
+          "token_in",
+          "token_in_symbol",
+          "amount_in",
+          "token_out",
+          "token_out_symbol",
+          "amount_out",
+          "amount_usd"
+        ],
+        "title": "TradeOut",
+        "type": "object"
+      },
+      "TraderOut": {
+        "description": "A wallet found trading on DEXes, with its statistics over the discovery window.",
+        "properties": {
+          "active_days": {
+            "title": "Active Days",
+            "type": "integer"
+          },
+          "address": {
+            "title": "Address",
+            "type": "string"
+          },
+          "arbitrage_share": {
+            "title": "Arbitrage Share",
+            "type": "number"
+          },
+          "bot_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bot Reason"
+          },
+          "computed_at": {
+            "format": "date-time",
+            "title": "Computed At",
+            "type": "string"
+          },
+          "distinct_tokens": {
+            "title": "Distinct Tokens",
+            "type": "integer"
+          },
+          "first_trade_at": {
+            "format": "date-time",
+            "title": "First Trade At",
+            "type": "string"
+          },
+          "is_bot": {
+            "title": "Is Bot",
+            "type": "boolean"
+          },
+          "last_trade_at": {
+            "format": "date-time",
+            "title": "Last Trade At",
+            "type": "string"
+          },
+          "max_tx_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Tx Usd"
+          },
+          "private_share": {
+            "title": "Private Share",
+            "type": "number"
+          },
+          "protocols": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Protocols",
+            "type": "array"
+          },
+          "router_share": {
+            "title": "Router Share",
+            "type": "number"
+          },
+          "settlement_share": {
+            "title": "Settlement Share",
+            "type": "number"
+          },
+          "swaps_per_tx": {
+            "title": "Swaps Per Tx",
+            "type": "number"
+          },
+          "top_tokens": {
+            "items": {
+              "$ref": "#/components/schemas/TopTokenOut"
+            },
+            "title": "Top Tokens",
+            "type": "array"
+          },
+          "tracked": {
+            "title": "Tracked",
+            "type": "boolean"
+          },
+          "tx_count": {
+            "title": "Tx Count",
+            "type": "integer"
+          },
+          "volume_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Volume Usd"
+          }
+        },
+        "required": [
+          "address",
+          "first_trade_at",
+          "last_trade_at",
+          "tx_count",
+          "active_days",
+          "volume_usd",
+          "max_tx_usd",
+          "distinct_tokens",
+          "protocols",
+          "top_tokens",
+          "router_share",
+          "private_share",
+          "settlement_share",
+          "swaps_per_tx",
+          "arbitrage_share",
+          "is_bot",
+          "bot_reason",
+          "tracked",
+          "computed_at"
+        ],
+        "title": "TraderOut",
         "type": "object"
       },
       "TransferOut": {
@@ -914,7 +1261,8 @@
       "WatchOrigin": {
         "enum": [
           "seed",
-          "neighbour"
+          "neighbour",
+          "trader"
         ],
         "title": "WatchOrigin",
         "type": "string"
@@ -1336,6 +1684,141 @@
         "summary": "Tags",
         "tags": [
           "analytics"
+        ]
+      }
+    },
+    "/v1/traders": {
+      "get": {
+        "description": "Wallets discovered from DEX trades, biggest first; bots are hidden unless asked for.",
+        "operationId": "traders_v1_traders_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_bots",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Bots",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "min_volume_usd",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Min Volume Usd"
+            }
+          },
+          {
+            "in": "query",
+            "name": "protocol",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "examples": [
+                "uniswap_v3"
+              ],
+              "title": "Protocol"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "default": "volume",
+              "enum": [
+                "volume",
+                "tx_count",
+                "last_trade"
+              ],
+              "title": "Sort",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Configured chain name",
+            "in": "query",
+            "name": "chain",
+            "required": false,
+            "schema": {
+              "default": "ethereum",
+              "description": "Configured chain name",
+              "title": "Chain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_TraderOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Traders",
+        "tags": [
+          "traders"
         ]
       }
     },
@@ -1815,6 +2298,91 @@
           }
         },
         "summary": "Get Timeline",
+        "tags": [
+          "wallets"
+        ]
+      }
+    },
+    "/v1/wallets/{address}/trades": {
+      "get": {
+        "description": "DEX swaps this wallet signed, newest first.",
+        "operationId": "get_trades_v1_wallets__address__trades_get",
+        "parameters": [
+          {
+            "description": "EVM address (any case)",
+            "in": "path",
+            "name": "address",
+            "required": true,
+            "schema": {
+              "description": "EVM address (any case)",
+              "title": "Address",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Configured chain name",
+            "in": "query",
+            "name": "chain",
+            "required": false,
+            "schema": {
+              "default": "ethereum",
+              "description": "Configured chain name",
+              "title": "Chain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_TradeOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Trades",
         "tags": [
           "wallets"
         ]

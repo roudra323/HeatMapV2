@@ -1,53 +1,112 @@
 @import "tailwindcss";
 
+/*
+ * HeatMap design tokens.
+ * Cool interface, warm data: the chrome stays in navy ink and cobalt; the only
+ * warm colour is the single-hue heat ramp, used where it encodes magnitude.
+ */
 @theme {
   --color-bg: var(--bg);
-  --color-panel: var(--panel);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
   --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
   --color-ink: var(--ink);
   --color-muted: var(--muted);
-  --color-accent: var(--accent);
-  --color-accent-soft: var(--accent-soft);
-  --color-danger: var(--danger);
+  --color-primary: var(--primary);
+  --color-primary-ink: var(--primary-ink);
+  --color-primary-soft: var(--primary-soft);
   --color-ok: var(--ok);
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --color-ok-soft: var(--ok-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-bot: var(--bot);
+  --color-bot-soft: var(--bot-soft);
+  --color-heat-1: var(--heat-1);
+  --color-heat-2: var(--heat-2);
+  --color-heat-3: var(--heat-3);
+  --color-heat-4: var(--heat-4);
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, monospace;
 }
 
 :root {
-  --bg: #f7f7f5;
-  --panel: #ffffff;
-  --line: #e4e4df;
-  --ink: #1b1b18;
-  --muted: #6b6b63;
-  --accent: #c2410c;
-  --accent-soft: #fff1e8;
-  --danger: #b91c1c;
-  --ok: #15803d;
-  --heat-0: #f3f2ee;
-  --heat-1: #fde4cf;
-  --heat-2: #fbb67e;
-  --heat-3: #f2793b;
-  --heat-4: #c2410c;
+  color-scheme: light;
+  --bg: #f3f5f8;
+  --surface: #ffffff;
+  --surface-2: #f6f8fb;
+  --line: #dde2ea;
+  --line-strong: #c4ccd8;
+  --ink: #13203a;
+  --muted: #566276;
+  --primary: #2448c4;
+  --primary-ink: #ffffff;
+  --primary-soft: #e8edfc;
+  --ok: #0b7454;
+  --ok-soft: #e2f3ec;
+  --danger: #b42318;
+  --danger-soft: #fdecea;
+  --bot: #4b5565;
+  --bot-soft: #eceff3;
+  --focus: #2448c4;
+  /* Sequential heat ramp: one hue, light to dark; step 0 means "nothing". */
+  --heat-0: #e9edf2;
+  --heat-1: #fbd3b4;
+  --heat-2: #f6a26e;
+  --heat-3: #e0642f;
+  --heat-4: #a83a12;
+  /* Categorical series (fixed order, never cycled). */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+  --series-6: #008300;
+  --series-7: #6250d6;
+  --series-8: #e34948;
+  --series-none: #a3acba;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #121211;
-    --panel: #1b1b19;
-    --line: #2d2d29;
-    --ink: #ececea;
-    --muted: #9b9b92;
-    --accent: #fb923c;
-    --accent-soft: #2a1d14;
-    --danger: #f87171;
-    --ok: #4ade80;
-    --heat-0: #222220;
-    --heat-1: #3b2a1e;
-    --heat-2: #7a3f1a;
-    --heat-3: #c2551b;
-    --heat-4: #fb923c;
+    color-scheme: dark;
+    --bg: #0f1622;
+    --surface: #151e2c;
+    --surface-2: #1a2434;
+    --line: #253145;
+    --line-strong: #34425a;
+    --ink: #e7ecf3;
+    --muted: #9aa6b8;
+    --primary: #8aa8ff;
+    --primary-ink: #0f1622;
+    --primary-soft: #1c2a4d;
+    --ok: #4fd1a5;
+    --ok-soft: #10302a;
+    --danger: #ff8a80;
+    --danger-soft: #3a1c1f;
+    --bot: #b8c1cf;
+    --bot-soft: #222c3b;
+    --focus: #8aa8ff;
+    /* In the dark, more heat glows brighter. */
+    --heat-0: #1e2838;
+    --heat-1: #5a2a16;
+    --heat-2: #93421b;
+    --heat-3: #d7672e;
+    --heat-4: #ffad72;
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+    --series-6: #008300;
+    --series-7: #9085e9;
+    --series-8: #e66767;
+    --series-none: #56627a;
   }
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -55,12 +114,48 @@ body {
   color: var(--ink);
 }
 
-/* Grid items default to min-width:auto, which lets wide tables push the page sideways. */
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+button,
+[role="button"],
+summary {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
 .grid > * {
   min-width: 0;
 }
 
+/* Hex content (addresses, hashes) only. Never for labels. */
 .mono {
   font-family: var(--font-mono);
+  font-size: 0.92em;
+  letter-spacing: -0.01em;
+}
+
+.num {
   font-variant-numeric: tabular-nums;
+}
+
+summary::-webkit-details-marker {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

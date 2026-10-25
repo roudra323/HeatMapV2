@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from heatmap_core.config.settings import SpamConfig
@@ -13,6 +14,7 @@ from tests.support import addr
 USDT = addr(0xA1)
 VERIFIED = {"USDT": USDT, "ETH": "0x" + "e" * 40}
 CONFIG = SpamConfig(airdrop_min_recipients=3)
+PAID = datetime(2026, 1, 1, tzinfo=UTC)
 
 
 def token(
@@ -75,7 +77,7 @@ def test_transfer_rules() -> None:
         tracked={wallet},
         spam_tokens={addr(0xBAD)},
         verified_tokens={USDT},
-        real_counterparties={wallet: {real}},
+        real_counterparties={wallet: {real: PAID}},
         config=CONFIG,
     )
     assert reasons == {
@@ -87,3 +89,20 @@ def test_transfer_rules() -> None:
         11: "mass_airdrop",
         12: "mass_airdrop",
     }
+
+
+def test_after_successful_poisoning_only_the_later_lookalike_is_flagged() -> None:
+    wallet = addr(1)
+    genuine = "0x1234aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa5678"
+    poisoned = "0x1234bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb5678"
+    # The wallet paid the genuine address first, then was tricked into paying the look-alike.
+    paid = {genuine: PAID, poisoned: datetime(2026, 2, 1, tzinfo=UTC)}
+    reasons = transfer_spam_reasons(
+        [info(1, wallet, genuine, amount=100), info(2, wallet, poisoned, amount=100, tx="0x2")],
+        tracked={wallet},
+        spam_tokens=set(),
+        verified_tokens={USDT},
+        real_counterparties={wallet: paid},
+        config=CONFIG,
+    )
+    assert reasons == {2: "lookalike_address"}

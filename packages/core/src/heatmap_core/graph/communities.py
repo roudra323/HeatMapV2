@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Collection
 from datetime import UTC, datetime
 
 import networkx as nx
@@ -15,14 +16,21 @@ from heatmap_core.entities.labels import hub_addresses
 ALGORITHM = "louvain"
 
 
-def build_graph(engine: Engine, chain_id: int, *, exclude_hubs: bool = True) -> nx.Graph:
+def build_graph(
+    engine: Engine,
+    chain_id: int,
+    *,
+    exclude_hubs: bool = True,
+    exclude: Collection[str] = (),
+) -> nx.Graph:
     """Undirected graph weighted by transfer count.
 
-    Hubs are left out so they do not merge everything into one community.
+    Hubs, and the addresses in ``exclude`` (e.g. high-degree wallets), are left
+    out so they do not merge everything into one community.
     """
     graph = nx.Graph()
     with session_scope(engine) as session:
-        hubs = hub_addresses(session, chain_id) if exclude_hubs else set()
+        hubs = (hub_addresses(session, chain_id) if exclude_hubs else set()) | set(exclude)
         for src, dst, count in session.execute(
             select(Edge.src, Edge.dst, Edge.tx_count).where(Edge.chain_id == chain_id)
         ):
@@ -33,9 +41,11 @@ def build_graph(engine: Engine, chain_id: int, *, exclude_hubs: bool = True) -> 
     return graph
 
 
-def detect_communities(engine: Engine, chain_id: int, *, seed: int = 42) -> int:
+def detect_communities(
+    engine: Engine, chain_id: int, *, seed: int = 42, exclude: Collection[str] = ()
+) -> int:
     """Run Louvain and store one community id per address; returns the community count."""
-    graph = build_graph(engine, chain_id)
+    graph = build_graph(engine, chain_id, exclude=exclude)
     communities = (
         nx.community.louvain_communities(graph, weight="weight", seed=seed) if graph else []
     )

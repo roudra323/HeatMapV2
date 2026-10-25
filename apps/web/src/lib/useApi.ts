@@ -2,13 +2,15 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { api } from "./api";
+import { api, ApiError } from "./api";
 
 type Query = Record<string, string | number | boolean | undefined>;
 
 export interface ApiState<T> {
   data: T | undefined;
   error: string | undefined;
+  /** HTTP status of the failed request (0 when the API could not be reached). */
+  status: number | undefined;
   loading: boolean;
   reload: () => void;
 }
@@ -17,6 +19,7 @@ interface Resolved<T> {
   key: string | null;
   data?: T;
   error?: string;
+  status?: number;
 }
 
 /** Fetch ``path`` whenever it or ``query`` changes; previous data stays visible while reloading. */
@@ -36,7 +39,11 @@ export function useApi<T>(path: string | null, query?: Query): ApiState<T> {
       })
       .catch((e: unknown) => {
         if (!cancelled) {
-          setResolved({ key: requestKey, error: e instanceof Error ? e.message : String(e) });
+          setResolved({
+            key: requestKey,
+            error: e instanceof Error ? e.message : String(e),
+            status: e instanceof ApiError ? e.status : undefined,
+          });
         }
       });
     return () => {
@@ -45,10 +52,12 @@ export function useApi<T>(path: string | null, query?: Query): ApiState<T> {
   }, [path, queryKey, requestKey]);
 
   const reload = useCallback(() => setTick((t) => t + 1), []);
+  const current = resolved.key === requestKey;
   return {
     data: resolved.data,
-    error: resolved.key === requestKey ? resolved.error : undefined,
-    loading: requestKey !== null && resolved.key !== requestKey,
+    error: current ? resolved.error : undefined,
+    status: current ? resolved.status : undefined,
+    loading: requestKey !== null && !current,
     reload,
   };
 }

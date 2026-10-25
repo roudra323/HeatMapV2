@@ -215,6 +215,20 @@ class ProviderRouter:
     def get_code(self, chain: Chain, address: str) -> str:
         return self.call(chain, lambda p, k: p.get_code(k, chain, address))[1]
 
+    def get_transaction_count(self, chain: Chain, address: str) -> int:
+        return self.call(chain, lambda p, k: p.get_transaction_count(k, chain, address))[1]
+
+    def get_logs(
+        self, chain: Chain, from_block: int, to_block: int, topics: list[Any]
+    ) -> list[dict[str, Any]]:
+        return self.call(chain, lambda p, k: p.get_logs(k, chain, from_block, to_block, topics))[1]
+
+    def get_block(self, chain: Chain, number: int) -> dict[str, Any]:
+        return self.call(chain, lambda p, k: p.get_block(k, chain, number))[1]
+
+    def eth_call(self, chain: Chain, to: str, data: str) -> str:
+        return self.call(chain, lambda p, k: p.eth_call(k, chain, to, data))[1]
+
 
 def _fetch_page(
     provider: TransferProvider, key: str, *, request: TransferRequest, cursor_owner: str | None

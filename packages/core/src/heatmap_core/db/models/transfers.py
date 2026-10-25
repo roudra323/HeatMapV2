@@ -69,14 +69,24 @@ class Transfer(Base):
             "id",
             postgresql_where=text("normalized_at IS NULL"),
         ),
+        Index(
+            "ix_transfers_unpriced",
+            "chain_id",
+            "id",
+            postgresql_where=text(
+                "amount_usd IS NULL AND normalized_at IS NOT NULL AND NOT is_spam"
+            ),
+        ),
     )
 
 
 class TokenPrice(Base):
+    """Daily USD price. A NULL price records that ``source`` had none for that day."""
+
     __tablename__ = "token_prices"
 
     chain_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     token_address: Mapped[Address] = mapped_column(primary_key=True)
     day: Mapped[date] = mapped_column(Date, primary_key=True)
-    price_usd: Mapped[Decimal] = mapped_column()
+    price_usd: Mapped[Decimal | None] = mapped_column()
     source: Mapped[str] = mapped_column(String(32))

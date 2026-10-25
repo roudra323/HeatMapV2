@@ -106,6 +106,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/traders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Traders
+         * @description Wallets discovered from DEX trades, biggest first; bots are hidden unless asked for.
+         */
+        get: operations["traders_v1_traders_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/wallets/{address}": {
         parameters: {
             query?: never;
@@ -200,6 +220,26 @@ export interface paths {
         };
         /** Get Timeline */
         get: operations["get_timeline_v1_wallets__address__timeline_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/wallets/{address}/trades": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Trades
+         * @description DEX swaps this wallet signed, newest first.
+         */
+        get: operations["get_trades_v1_wallets__address__trades_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -426,6 +466,28 @@ export interface components {
             /** Tracked */
             tracked: boolean;
         };
+        /** Page[TradeOut] */
+        Page_TradeOut_: {
+            /** Items */
+            items: components["schemas"]["TradeOut"][];
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Total */
+            total: number;
+        };
+        /** Page[TraderOut] */
+        Page_TraderOut_: {
+            /** Items */
+            items: components["schemas"]["TraderOut"][];
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Total */
+            total: number;
+        };
         /** Page[TransferOut] */
         Page_TransferOut_: {
             /** Items */
@@ -474,6 +536,102 @@ export interface components {
             usd_in: string | null;
             /** Usd Out */
             usd_out: string | null;
+        };
+        /** TopTokenOut */
+        TopTokenOut: {
+            /** Symbol */
+            symbol: string | null;
+            /** Token */
+            token: string;
+            /** Trades */
+            trades: number;
+        };
+        /** TradeOut */
+        TradeOut: {
+            /** Amount In */
+            amount_in: string | null;
+            /** Amount Out */
+            amount_out: string | null;
+            /** Amount Usd */
+            amount_usd: string | null;
+            /** Block Number */
+            block_number: number;
+            /**
+             * Block Time
+             * Format: date-time
+             */
+            block_time: string;
+            /** Log Index */
+            log_index: number;
+            /** Pool Id */
+            pool_id: string;
+            /** Protocol */
+            protocol: string;
+            /** Token In */
+            token_in: string;
+            /** Token In Symbol */
+            token_in_symbol: string | null;
+            /** Token Out */
+            token_out: string;
+            /** Token Out Symbol */
+            token_out_symbol: string | null;
+            /** Tx Hash */
+            tx_hash: string;
+            /** Tx To */
+            tx_to: string | null;
+        };
+        /**
+         * TraderOut
+         * @description A wallet found trading on DEXes, with its statistics over the discovery window.
+         */
+        TraderOut: {
+            /** Active Days */
+            active_days: number;
+            /** Address */
+            address: string;
+            /** Arbitrage Share */
+            arbitrage_share: number;
+            /** Bot Reason */
+            bot_reason: string | null;
+            /**
+             * Computed At
+             * Format: date-time
+             */
+            computed_at: string;
+            /** Distinct Tokens */
+            distinct_tokens: number;
+            /**
+             * First Trade At
+             * Format: date-time
+             */
+            first_trade_at: string;
+            /** Is Bot */
+            is_bot: boolean;
+            /**
+             * Last Trade At
+             * Format: date-time
+             */
+            last_trade_at: string;
+            /** Max Tx Usd */
+            max_tx_usd: string | null;
+            /** Private Share */
+            private_share: number;
+            /** Protocols */
+            protocols: string[];
+            /** Router Share */
+            router_share: number;
+            /** Settlement Share */
+            settlement_share: number;
+            /** Swaps Per Tx */
+            swaps_per_tx: number;
+            /** Top Tokens */
+            top_tokens: components["schemas"]["TopTokenOut"][];
+            /** Tracked */
+            tracked: boolean;
+            /** Tx Count */
+            tx_count: number;
+            /** Volume Usd */
+            volume_usd: string | null;
         };
         /** TransferOut */
         TransferOut: {
@@ -550,7 +708,7 @@ export interface components {
          * WatchOrigin
          * @enum {string}
          */
-        WatchOrigin: "seed" | "neighbour";
+        WatchOrigin: "seed" | "neighbour" | "trader";
         /** WatchlistCreate */
         WatchlistCreate: {
             /**
@@ -778,6 +936,44 @@ export interface operations {
             };
         };
     };
+    traders_v1_traders_get: {
+        parameters: {
+            query?: {
+                offset?: number;
+                include_bots?: boolean;
+                min_volume_usd?: number | null;
+                protocol?: string | null;
+                sort?: "volume" | "tx_count" | "last_trade";
+                /** @description Configured chain name */
+                chain?: string;
+                limit?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_TraderOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_wallet_v1_wallets__address__get: {
         parameters: {
             query?: {
@@ -987,6 +1183,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TimelineBucketOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_trades_v1_wallets__address__trades_get: {
+        parameters: {
+            query?: {
+                offset?: number;
+                /** @description Configured chain name */
+                chain?: string;
+                limit?: number | null;
+            };
+            header?: never;
+            path: {
+                /** @description EVM address (any case) */
+                address: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_TradeOut_"];
                 };
             };
             /** @description Validation Error */

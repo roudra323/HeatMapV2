@@ -11,14 +11,17 @@ from heatmap_core.db.session import session_scope
 from heatmap_core.ingestion.watchlist import add_seed
 from heatmap_core.pipeline import (
     compute_behaviour,
+    discover_traders,
     label_wallets,
     normalize,
     refresh_graph,
     seed_reference_data,
     sync_tracked_wallets,
 )
+from tests.integration.test_discovery import BOT, HUMAN, EthPrices, build_chain, settings
 from tests.integration.test_pipeline import BINANCE, SEEDS, START, build_source
 from tests.support import addr, ethereum
+from tests.support_dex import dex_chain
 
 SETTINGS = Settings(
     chains={"ethereum": {"chain_id": 1}},
@@ -134,3 +137,31 @@ def test_analytics_endpoints(client: TestClient) -> None:
 def test_openapi_schema(client: TestClient) -> None:
     paths = client.get("/openapi.json").json()["paths"]
     assert "/v1/wallets/{address}/neighbors" in paths
+
+
+def test_traders_and_trades(client: TestClient, engine: Engine) -> None:
+    chain = dex_chain()
+    seed_reference_data(engine, chain)
+    discover_traders(engine, build_chain(), chain, settings(), EthPrices())
+
+    page = client.get("/v1/traders").json()
+    assert page["total"] == 1 and page["items"][0]["address"] == HUMAN
+    human = page["items"][0]
+    assert human["volume_usd"] == "4100.00000000" and human["tracked"] is True
+    assert human["top_tokens"][0]["symbol"] in {"USDC", "WETH"}
+
+    everyone = client.get("/v1/traders", params={"include_bots": True, "sort": "tx_count"}).json()
+    assert everyone["total"] == 3
+    assert {t["bot_reason"] for t in everyone["items"]} == {
+        None,
+        "private_contract",
+        "settlement_signer",
+    }
+    assert client.get("/v1/traders", params={"min_volume_usd": 5000}).json()["total"] == 0
+    assert client.get("/v1/traders", params={"protocol": "uniswap_v4"}).json()["total"] == 0
+
+    trades = client.get(f"/v1/wallets/{HUMAN}/trades").json()
+    assert trades["total"] == 3  # including the unverified pool: the raw trade list is complete
+    newest = trades["items"][0]
+    assert (newest["token_in_symbol"], newest["token_out_symbol"]) == ("WETH", "USDC")
+    assert client.get(f"/v1/wallets/{BOT}/trades").json()["items"][0]["token_in_symbol"] == "NEW"

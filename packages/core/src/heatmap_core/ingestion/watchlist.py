@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
-from heatmap_core.db.models import WatchlistEntry
+from heatmap_core.db.models import SyncCursor, WatchlistEntry
 from heatmap_core.primitives import WatchOrigin, normalize_address
 
 
@@ -59,4 +59,23 @@ def active_addresses(session: Session, chain_id: int, limit: int | None = None) 
     )
     if limit is not None:
         query = query.limit(limit)
+    return list(session.scalars(query))
+
+
+def unsynced_addresses(session: Session, chain_id: int) -> list[str]:
+    """Active wallets that have never been synced (no cursor yet)."""
+    query = (
+        select(WatchlistEntry.address)
+        .outerjoin(
+            SyncCursor,
+            (SyncCursor.chain_id == WatchlistEntry.chain_id)
+            & (SyncCursor.address == WatchlistEntry.address),
+        )
+        .where(
+            WatchlistEntry.chain_id == chain_id,
+            WatchlistEntry.active.is_(True),
+            SyncCursor.address.is_(None),
+        )
+        .order_by(WatchlistEntry.priority, WatchlistEntry.hop, WatchlistEntry.address)
+    )
     return list(session.scalars(query))

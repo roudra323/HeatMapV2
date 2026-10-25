@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import Engine
 
-from heatmap_api.routers import analytics, meta, wallets, watchlist
+from heatmap_api.routers import analytics, meta, traders, wallets, watchlist
 from heatmap_core import __version__
 from heatmap_core.config import Settings, get_settings
 from heatmap_core.db.session import make_engine
@@ -32,7 +32,7 @@ def create_app(settings: Settings | None = None, engine: Engine | None = None) -
         allow_methods=["GET", "POST", "DELETE"],
         allow_headers=["*"],
     )
-    for module in (meta, watchlist, wallets, analytics):
+    for module in (meta, watchlist, wallets, traders, analytics):
         app.include_router(module.router)
     return app
 

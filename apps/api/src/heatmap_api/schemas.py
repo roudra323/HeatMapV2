@@ -172,3 +172,50 @@ class ClusterPointOut(BaseModel):
     x: float
     y: float
     probability: float | None
+
+
+class TopTokenOut(BaseModel):
+    token: str
+    symbol: str | None
+    trades: int
+
+
+class TraderOut(BaseModel):
+    """A wallet found trading on DEXes, with its statistics over the discovery window."""
+
+    address: str
+    first_trade_at: datetime
+    last_trade_at: datetime
+    tx_count: int
+    active_days: int
+    volume_usd: Decimal | None
+    max_tx_usd: Decimal | None
+    distinct_tokens: int
+    protocols: list[str]
+    top_tokens: list[TopTokenOut]
+    router_share: float
+    private_share: float
+    settlement_share: float
+    swaps_per_tx: float
+    arbitrage_share: float
+    is_bot: bool
+    bot_reason: str | None
+    tracked: bool
+    computed_at: datetime
+
+
+class TradeOut(BaseModel):
+    tx_hash: str
+    block_number: int
+    block_time: datetime
+    log_index: int
+    protocol: str
+    pool_id: str
+    tx_to: str | None
+    token_in: str
+    token_in_symbol: str | None
+    amount_in: Decimal | None
+    token_out: str
+    token_out_symbol: str | None
+    amount_out: Decimal | None
+    amount_usd: Decimal | None

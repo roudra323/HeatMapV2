@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import yaml
+from dotenv import load_dotenv
 from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic_settings import (
     BaseSettings,
@@ -62,9 +63,21 @@ class ChainConfig(BaseModel):
         gt=0,
         description="Blocks fetched per request range; the cursor commits per chunk",
     )
+    classify_per_sync: int = Field(
+        500,
+        ge=0,
+        description="Unknown counterparties checked with eth_getCode per sync run (0: off)",
+    )
+    multicall3: str = "0xca11bde05977b3631167028862be2a173976ca11"
+    wrapped_native: str | None = Field(None, description="WETH-style token priced like native")
+    uniswap_v4_pool_manager: str | None = None
+    uniswap_v4_position_manager: str | None = None
     native_symbol: str = "ETH"
     native_decimals: int = 18
     alchemy_network: str | None = None
+    defillama_chain: str | None = Field(
+        None, description="DefiLlama chain slug for token prices; defaults to the chain name"
+    )
     explorer_url: str | None = None
 
 
@@ -72,9 +85,10 @@ class ScheduleConfig(BaseModel):
     enabled: bool = True
     timezone: str = "UTC"
     sync_cron: str = "0 * * * *"
+    discovery_cron: str = "*/10 * * * *"
     expansion_cron: str = "30 */6 * * *"
+    # Models run right after features in the same job, so they have no cron of their own.
     features_cron: str = "0 2 * * *"
-    models_cron: str = "30 2 * * *"
 
 
 class ExpansionConfig(BaseModel):
@@ -86,7 +100,20 @@ class ExpansionConfig(BaseModel):
     hub_degree_threshold: int = Field(
         2000, description="Addresses with more distinct counterparties are treated as hubs"
     )
-    max_total_neighbours: int = 5000
+    max_total_neighbours: int = Field(5000, description="Cap on neighbours tracked at once")
+
+
+class TrackingConfig(BaseModel):
+    """Checks on wallets added automatically (DEX traders, neighbours) before their first sync.
+
+    Contracts, and wallets that sent more than ``max_sent_txs`` transactions,
+    are not tracked: they are pools, protocols, exchanges, payout services or
+    bots, and one of them can hold millions of transfers.
+    """
+
+    max_sent_txs: int = Field(
+        10_000, gt=0, description="Wallets that sent more transactions are not tracked"
+    )
 
 
 class SpamConfig(BaseModel):
@@ -112,6 +139,45 @@ class FeatureConfig(BaseModel):
         return value
 
 
+class PromotionConfig(BaseModel):
+    """Which discovered traders join the watchlist for deep sync and neighbour expansion."""
+
+    enabled: bool = True
+    min_volume_usd: float = 5_000
+    min_trades: int = Field(3, description="Distinct transactions in the discovery window")
+    min_active_days: int = 2
+    max_per_run: int = 25
+    max_total: int = Field(500, description="Cap on promoted wallets tracked at once")
+
+
+class DiscoveryConfig(BaseModel):
+    """Finding wallets from DEX trades (Uniswap v2/v3/v4 and forks)."""
+
+    enabled: bool = True
+    backfill_blocks: int = Field(7_200, ge=0, description="Blocks scanned on the first run")
+    max_blocks_per_run: int = Field(1_800, gt=0)
+    logs_block_range: int = Field(10, gt=0, description="Blocks per eth_getLogs request")
+    window_days: int = Field(30, gt=0, description="Trades used for trader statistics")
+    min_router_signers: int = Field(
+        10,
+        description="A contract called by fewer distinct signers is private (bot-like), "
+        "unless it is a labelled router",
+    )
+    max_router_txs_per_signer: float = Field(
+        5,
+        description="An unlabelled contract whose signers average more transactions than "
+        "this in the window is private: rotating bot wallets, not a public router",
+    )
+    bot_tx_per_day: float = Field(100, description="Trade frequency treated as a bot")
+    bot_swaps_per_tx: float = Field(
+        6, description="Average swaps per transaction treated as a solver/market maker"
+    )
+    bot_arbitrage_share: float = Field(
+        0.3, description="Share of circular (arbitrage) transactions treated as a bot"
+    )
+    promote: PromotionConfig = Field(default_factory=PromotionConfig)
+
+
 class ModelConfig(BaseModel):
     version: str = "v1"
     window: str = Field("all", description="Feature window used for tags, clusters, anomalies")
@@ -129,8 +195,10 @@ class ApiConfig(BaseModel):
 
 class PricingConfig(BaseModel):
     enabled: bool = True
-    base_url: str = "https://api.coingecko.com/api/v3"
-    api_key_env: str | None = "COINGECKO_API_KEY"
+    source: Literal["defillama", "coingecko"] = "defillama"
+    defillama_url: str = "https://coins.llama.fi"
+    coingecko_url: str = "https://api.coingecko.com/api/v3"
+    coingecko_api_key_env: str | None = "COINGECKO_API_KEY"
 
 
 class Settings(BaseSettings):
@@ -149,8 +217,10 @@ class Settings(BaseSettings):
     chains: dict[str, ChainConfig] = Field(default_factory=dict)
     schedules: ScheduleConfig = Field(default_factory=ScheduleConfig)
     expansion: ExpansionConfig = Field(default_factory=ExpansionConfig)
+    tracking: TrackingConfig = Field(default_factory=TrackingConfig)
     spam: SpamConfig = Field(default_factory=SpamConfig)
     features: FeatureConfig = Field(default_factory=FeatureConfig)
+    discovery: DiscoveryConfig = Field(default_factory=DiscoveryConfig)
     models: ModelConfig = Field(default_factory=ModelConfig)
     pricing: PricingConfig = Field(default_factory=PricingConfig)
     api: ApiConfig = Field(default_factory=ApiConfig)
@@ -219,6 +289,19 @@ class _YamlFilesSource(PydanticBaseSettingsSource):
         return load_yaml_config(config_files())
 
 
+def load_env_file() -> None:
+    """Load ``.env`` (or the file named by ``HEATMAP_ENV_FILE``) into the environment.
+
+    Provider keys are read from ``os.environ``, so the file must be loaded there,
+    not only into ``Settings``. Variables already set in the environment win.
+    An empty ``HEATMAP_ENV_FILE`` disables loading (the test suite does this).
+    """
+    path = os.environ.get("HEATMAP_ENV_FILE", ".env")
+    if path:
+        load_dotenv(path, override=False)
+
+
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
+    load_env_file()
     return Settings()

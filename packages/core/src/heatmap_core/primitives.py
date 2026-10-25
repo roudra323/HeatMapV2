@@ -60,6 +60,7 @@ class EntityCategory(StrEnum):
     MIXER = "mixer"
     PROTOCOL = "protocol"
     SYSTEM = "system"
+    SETTLEMENT = "settlement"  # intent/solver settlement: the signer is not the trader
     OTHER = "other"
 
 
@@ -77,6 +78,7 @@ class TokenCategory(StrEnum):
 class WatchOrigin(StrEnum):
     SEED = "seed"
     NEIGHBOUR = "neighbour"
+    TRADER = "trader"  # promoted from DEX trade discovery
 
 
 class LabelKind(StrEnum):

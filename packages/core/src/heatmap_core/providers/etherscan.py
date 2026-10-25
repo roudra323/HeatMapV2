@@ -21,6 +21,7 @@ from heatmap_core.providers.errors import (
     QuotaExceededError,
     RateLimitedError,
     TransientProviderError,
+    UnsupportedError,
 )
 
 ACTIONS: tuple[tuple[str, TransferCategory], ...] = (
@@ -120,6 +121,48 @@ class EtherscanProvider:
             key,
             chain,
             {"module": "proxy", "action": "eth_getCode", "address": address, "tag": "latest"},
+        )
+        return str(result)
+
+    def get_transaction_count(self, key: str, chain: Chain, address: str) -> int:
+        result = self._get(
+            key,
+            chain,
+            {
+                "module": "proxy",
+                "action": "eth_getTransactionCount",
+                "address": address,
+                "tag": "latest",
+            },
+        )
+        return int(str(result), 16)
+
+    def get_logs(
+        self, key: str, chain: Chain, from_block: int, to_block: int, topics: list[Any]
+    ) -> list[dict[str, Any]]:
+        # The logs module takes one topic0 per request and pages at 1,000 rows.
+        raise UnsupportedError("etherscan does not serve multi-topic log scans")
+
+    def get_block(self, key: str, chain: Chain, number: int) -> dict[str, Any]:
+        result = self._get(
+            key,
+            chain,
+            {
+                "module": "proxy",
+                "action": "eth_getBlockByNumber",
+                "tag": hex(number),
+                "boolean": "true",
+            },
+        )
+        if not isinstance(result, dict):
+            raise TransientProviderError(f"block {number} not available yet")
+        return result
+
+    def eth_call(self, key: str, chain: Chain, to: str, data: str) -> str:
+        result = self._get(
+            key,
+            chain,
+            {"module": "proxy", "action": "eth_call", "to": to, "data": data, "tag": "latest"},
         )
         return str(result)
 

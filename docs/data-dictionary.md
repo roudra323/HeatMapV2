@@ -7,11 +7,20 @@ All addresses are stored lowercase. Every table is keyed by `chain_id`.
 
 | Table | Key | Purpose |
 |---|---|---|
-| `watchlist` | chain, address | Wallets synced on every run. `origin` = `seed` or `neighbour`; `hop`, `via_address` record how a neighbour was found; `active` toggles tracking. |
+| `watchlist` | chain, address | Wallets synced on every run. `origin` = `seed`, `neighbour` or `trader` (promoted from DEX discovery); `hop`, `via_address` record how a neighbour was found; `active` toggles tracking. Automatic wallets rejected by vetting are inactive and their `note` ends with `Not tracked: <reason>`. |
 | `sync_cursors` | chain, address | Last fully ingested block, last sync time and last error. |
-| `wallets` | chain, address | Every address seen: `kind` (eoa/contract/unknown), first/last seen, `funded_by` (sender of the first inbound native transfer, tracked wallets only). |
+| `wallets` | chain, address | Every address seen: `kind` (eoa/contract/unknown; EIP-7702 delegated accounts are eoa), first/last seen, `funded_by` (sender of the first inbound native transfer, tracked wallets only), `sent_txs` (transactions sent, checked once before automatic tracking). |
 | `entity_labels` | chain, address | Known entities. `is_hub` addresses are never expanded. `source = 'seed_file'` rows are refreshed from CSV; other sources are left alone. |
 | `provider_key_usage` | provider, key, day | Requests, rate-limit hits and errors per key per UTC day. |
+
+## DEX discovery
+
+| Table | Key | Purpose |
+|---|---|---|
+| `dex_pools` | chain, pool_id | Pools seen emitting swaps (`pool_id` = address, or PoolId for v4): `protocol`, `factory`, `token0`/`token1` (native ETH as `0xeee…`), `fee`, `hooks`, `verified` (a known factory confirms it, or the v4 key hashes to the PoolId). |
+| `dex_trades` | id; unique (chain, tx, log index) | One swap: `trader` (tx signer), `tx_to` (contract called), `token_in`/`token_out` with raw and decimal-adjusted amounts, `amount_usd` from the stablecoin or ETH side. |
+| `dex_cursors` | chain | Last block scanned for swaps. |
+| `dex_traders` | chain, address | Per signer over `discovery.window_days`, verified pools only: first/last trade, `tx_count`, `active_days`, `volume_usd` (each transaction counted once), `max_tx_usd`, `distinct_tokens`, `traded_tokens` (besides stablecoins; ETH and WETH count as one), `protocols`, `top_tokens`, route shares (`router`, `private`, `settlement`), `swaps_per_tx`, `arbitrage_share`, `is_bot`, `bot_reason`. Rebuilt by the discovery stage. |
 
 ## Transfers
 
@@ -19,7 +28,7 @@ All addresses are stored lowercase. Every table is keyed by `chain_id`.
 |---|---|---|
 | `transfers` | id; unique (chain, uid) | One value movement. `uid` is a hash of on-chain facts (tx, category, parties, token, token id, amount) plus an ordinal, so different providers produce the same id. `amount` is decimal-adjusted, `amount_usd` priced at the daily close, `is_spam`/`spam_reason` from the spam rules, `normalized_at` set by the normalise stage. |
 | `tokens` | chain, address | `standard`, symbol, name, decimals, `category` (native, stablecoin, wrapped, liquid_staking, defi, meme, nft, other), `is_verified`, `is_spam`, `price_id`. |
-| `token_prices` | chain, token, day | Cached daily USD prices. |
+| `token_prices` | chain, token, day | Cached daily USD prices and their `source`. A NULL `price_usd` records that the source has no price for that day (or cannot price the token), so it is not asked again. |
 
 Spam reasons: `spam_token`, `zero_value`, `lookalike_address`, `mass_airdrop`;
 token-level `non_ascii_symbol`, `promo_text`, `impersonates:<SYMBOL>`.
@@ -29,7 +38,7 @@ token-level `non_ascii_symbol`, `promo_text`, `impersonates:<SYMBOL>`.
 | Table | Key | Purpose |
 |---|---|---|
 | `edges` | chain, src, dst | Directed aggregate of non-spam transfers: count, distinct tokens, USD value, first/last seen. Rebuilt by the graph stage. |
-| `wallet_communities` | chain, address | Louvain community on the hub-free undirected graph (largest community = 0). |
+| `wallet_communities` | chain, address | Louvain community on the undirected graph without hubs and high-degree addresses (largest community = 0). |
 
 ## Behaviour
 

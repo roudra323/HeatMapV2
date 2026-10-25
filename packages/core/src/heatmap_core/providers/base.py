@@ -98,3 +98,21 @@ class TransferProvider(Protocol):
     def latest_block(self, key: str, chain: Chain) -> int: ...
 
     def get_code(self, key: str, chain: Chain, address: str) -> str: ...
+
+    def get_transaction_count(self, key: str, chain: Chain, address: str) -> int:
+        """Transactions ``address`` has sent (its nonce) as of the latest block."""
+        ...
+
+    def get_logs(
+        self, key: str, chain: Chain, from_block: int, to_block: int, topics: list[Any]
+    ) -> list[dict[str, Any]]:
+        """Raw ``eth_getLogs`` entries in ``[from_block, to_block]`` matching ``topics``."""
+        ...
+
+    def get_block(self, key: str, chain: Chain, number: int) -> dict[str, Any]:
+        """Raw ``eth_getBlockByNumber`` with full transaction objects."""
+        ...
+
+    def eth_call(self, key: str, chain: Chain, to: str, data: str) -> str:
+        """Hex result of a read-only call at the latest block."""
+        ...

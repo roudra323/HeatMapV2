@@ -17,6 +17,7 @@ from heatmap_core.db.session import session_scope
 from heatmap_core.entities.labels import hub_addresses
 from heatmap_core.features.context import SIDES_SCHEMA, WALLETS_SCHEMA, FeatureContext
 from heatmap_core.features.registry import FEATURE_VERSION, compute_all
+from heatmap_core.graph.expansion import high_degree_addresses
 from heatmap_core.logging import get_logger
 from heatmap_core.primitives import NATIVE_TOKEN, NULL_ADDRESS, AddressKind
 
@@ -61,18 +62,27 @@ class FeatureRunResult:
     snapshot_at: datetime
     rows: int = 0
     wallets_by_window: dict[str, int] = field(default_factory=dict)
+    skipped: bool = False
 
 
 def load_context(
     engine: Engine, chain: Chain, settings: Settings, snapshot_at: datetime
 ) -> FeatureContext:
+    """Transfers of synced, tracked wallets, as one row per (wallet, transfer side).
+
+    Tracked wallets that turned out to be hubs (labelled, or more distinct
+    counterparties than ``expansion.hub_degree_threshold``) are left out: they
+    are exchanges, payout or treasury wallets, not people, and one of them can
+    hold millions of transfers.
+    """
     chain_id = chain.chain_id
+    busy = high_degree_addresses(engine, chain_id, settings.expansion.hub_degree_threshold)
     with session_scope(engine) as session:
-        tracked = list(session.scalars(TRACKED_SQL, {"chain_id": chain_id}))
+        hubs = hub_addresses(session, chain_id) | {NULL_ADDRESS, NATIVE_TOKEN} | busy
+        tracked = [a for a in session.scalars(TRACKED_SQL, {"chain_id": chain_id}) if a not in hubs]
         params = {"chain_id": chain_id, "wallets": tracked, "snapshot_at": snapshot_at}
         transfers = session.execute(TRANSFERS_SQL, params).mappings().all()
         wallet_rows = session.execute(WALLETS_SQL, params).mappings().all()
-        hubs = hub_addresses(session, chain_id) | {NULL_ADDRESS, NATIVE_TOKEN}
         entities: dict[str, str] = {
             address: category
             for address, category in session.execute(

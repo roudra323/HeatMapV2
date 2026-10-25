@@ -7,10 +7,15 @@ from heatmap_core.db.models.analytics import (
     WalletFeatureSnapshot,
     WalletLabel,
 )
+from heatmap_core.db.models.dex import DexCursor, DexPool, DexTrade, DexTrader
 from heatmap_core.db.models.transfers import Token, TokenPrice, Transfer
 from heatmap_core.db.models.wallets import EntityLabel, SyncCursor, Wallet, WatchlistEntry
 
 __all__ = [
+    "DexCursor",
+    "DexPool",
+    "DexTrade",
+    "DexTrader",
     "Edge",
     "EntityLabel",
     "ProviderKeyUsage",

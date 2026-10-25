@@ -7,14 +7,19 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any, Protocol
 
-from sqlalchemy import Engine, delete, func, or_, select
+from sqlalchemy import Engine, delete, func, or_, select, text
 from sqlalchemy.dialects.postgresql import insert
 
 from heatmap_core.config import Chain
 from heatmap_core.db.models import SyncCursor, Token, Transfer, Wallet
 from heatmap_core.db.session import session_scope
 from heatmap_core.logging import get_logger
-from heatmap_core.primitives import AddressKind, TransferCategory, normalize_address
+from heatmap_core.primitives import (
+    NULL_ADDRESS,
+    AddressKind,
+    TransferCategory,
+    normalize_address,
+)
 from heatmap_core.providers.base import RawTransfer
 
 log = get_logger(__name__)
@@ -31,6 +36,23 @@ class TransferSource(Protocol):
     def latest_block(self, chain: Chain) -> int: ...
 
     def get_code(self, chain: Chain, address: str) -> str: ...
+
+    def get_transaction_count(self, chain: Chain, address: str) -> int: ...
+
+
+# EIP-7702: an EOA that delegates to contract code has code 0xef0100 + the delegate address.
+DELEGATION_PREFIX = "0xef0100"
+DELEGATION_LENGTH = len(DELEGATION_PREFIX) + 40
+
+
+def kind_from_code(code: str) -> AddressKind:
+    """EOA or contract from ``eth_getCode``; EIP-7702 delegated accounts are EOAs."""
+    code = code.lower()
+    if code in ("0x", "0x0", ""):
+        return AddressKind.EOA
+    if code.startswith(DELEGATION_PREFIX) and len(code) == DELEGATION_LENGTH:
+        return AddressKind.EOA
+    return AddressKind.CONTRACT
 
 
 @dataclass
@@ -274,17 +296,76 @@ def classify_addresses(
             )
         )
     kinds: dict[str, AddressKind] = {}
-    for address in [*unknown, *sorted(known_missing)]:
-        code = source.get_code(chain, address)
-        kinds[address] = AddressKind.EOA if code in ("0x", "0x0", "") else AddressKind.CONTRACT
-    if kinds:
-        with session_scope(engine) as session:
-            stmt = insert(Wallet).values(
-                [{"chain_id": chain.chain_id, "address": a, "kind": k} for a, k in kinds.items()]
-            )
-            session.execute(
-                stmt.on_conflict_do_update(
-                    index_elements=["chain_id", "address"], set_={"kind": stmt.excluded.kind}
+    try:
+        for address in [*unknown, *sorted(known_missing)]:
+            kinds[address] = kind_from_code(source.get_code(chain, address))
+    finally:  # keep what was classified even if the provider gives out part-way
+        if kinds:
+            rows = [{"chain_id": chain.chain_id, "address": a, "kind": k} for a, k in kinds.items()]
+            with session_scope(engine) as session:
+                stmt = insert(Wallet).values(rows)
+                session.execute(
+                    stmt.on_conflict_do_update(
+                        index_elements=["chain_id", "address"], set_={"kind": stmt.excluded.kind}
+                    )
                 )
-            )
     return kinds
+
+
+# Contracts the stored data already proves: token contracts. Senders of internal
+# transfers prove nothing since EIP-7702: a delegated EOA sends them too.
+INFER_CONTRACTS_SQL = text(
+    """
+    UPDATE wallets AS w SET kind = 'contract'
+    WHERE w.chain_id = :chain_id
+      AND w.kind = 'unknown'
+      AND EXISTS (
+          SELECT 1 FROM tokens tok
+          WHERE tok.chain_id = w.chain_id AND tok.address = w.address
+            AND tok.standard <> 'native'
+      )
+    """
+)
+
+# Unknown counterparties of tracked wallets, most frequent first.
+UNKNOWN_COUNTERPARTIES_SQL = text(
+    """
+    SELECT w.address
+    FROM wallets w
+    JOIN (
+        SELECT counterparty, COUNT(*) AS interactions
+        FROM (
+            SELECT t.to_address AS counterparty
+            FROM transfers t
+            JOIN watchlist wl ON wl.chain_id = t.chain_id AND wl.address = t.from_address
+            WHERE t.chain_id = :chain_id AND wl.active AND NOT t.is_spam
+            UNION ALL
+            SELECT t.from_address
+            FROM transfers t
+            JOIN watchlist wl ON wl.chain_id = t.chain_id AND wl.address = t.to_address
+            WHERE t.chain_id = :chain_id AND wl.active AND NOT t.is_spam
+        ) AS sides
+        GROUP BY counterparty
+    ) AS c ON c.counterparty = w.address
+    WHERE w.chain_id = :chain_id AND w.kind = 'unknown' AND w.address <> :null_address
+    ORDER BY c.interactions DESC, w.address
+    LIMIT :budget
+    """
+)
+
+
+def classify_counterparties(
+    engine: Engine, source: TransferSource, chain: Chain, budget: int
+) -> int:
+    """Mark counterparties of tracked wallets as EOA or contract; returns how many.
+
+    Contracts proven by stored data are marked without any request; then up to
+    ``budget`` of the most frequent remaining counterparties are checked with
+    ``eth_getCode``. Later runs continue where this one stopped.
+    """
+    params = {"chain_id": chain.chain_id, "null_address": NULL_ADDRESS, "budget": budget}
+    with session_scope(engine) as session:
+        inferred = int(session.execute(INFER_CONTRACTS_SQL, params).rowcount or 0)  # type: ignore[attr-defined]
+        candidates = list(session.scalars(UNKNOWN_COUNTERPARTIES_SQL, params)) if budget else []
+    checked = classify_addresses(engine, source, chain, candidates) if candidates else {}
+    return inferred + len(checked)

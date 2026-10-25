@@ -12,7 +12,9 @@ Transfer-level rules:
   is the victim's own wallet; direction therefore cannot clear it. Zero-value
   native transfers are ordinary contract calls and are kept.
 - ``lookalike_address``: counterparty shares the first and last 4 hex chars
-  with an address the wallet really transacted with, but is a different address.
+  with an address the wallet really paid, but is a different address. If the
+  wallet has paid both (the poisoning worked), the one it paid first is the
+  genuine one and only the later look-alike is flagged.
 - ``mass_airdrop``: unverified token sent to many recipients in one transaction.
 
 Verified tokens are never flagged at token level.
@@ -23,8 +25,9 @@ from __future__ import annotations
 import re
 import unicodedata
 from collections import defaultdict
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import Decimal
 
 from heatmap_core.config.settings import SpamConfig
@@ -82,19 +85,45 @@ def lookalike(a: str, b: str) -> bool:
     return a != b and a[2:6] == b[2:6] and a[-4:] == b[-4:]
 
 
+def _lookalike_key(address: str) -> tuple[str, str]:
+    return address[2:6], address[-4:]
+
+
+class PaidIndex:
+    """A wallet's paid counterparties, bucketed so look-alike checks need no full scan.
+
+    Busy wallets pay tens of thousands of addresses; only those sharing the
+    first and last four hex characters can look alike.
+    """
+
+    def __init__(self, paid: Mapping[str, datetime]) -> None:
+        self._paid = paid
+        self._buckets: dict[tuple[str, str], list[tuple[str, datetime]]] = defaultdict(list)
+        for address, when in paid.items():
+            self._buckets[_lookalike_key(address)].append((address, when))
+
+    def imitated_by(self, address: str) -> bool:
+        """``address`` looks like a counterparty that was paid before ``address`` ever was."""
+        first = self._paid.get(address)
+        return any(
+            other != address and (first is None or when < first)
+            for other, when in self._buckets.get(_lookalike_key(address), ())
+        )
+
+
 def transfer_spam_reasons(
     transfers: Iterable[TransferInfo],
     tracked: set[str],
     spam_tokens: set[str],
     verified_tokens: set[str],
-    real_counterparties: dict[str, set[str]],
+    real_counterparties: Mapping[str, Mapping[str, datetime]],
     config: SpamConfig,
     recipient_counts: dict[tuple[str, str], int] | None = None,
 ) -> dict[int, str]:
     """Return ``{transfer_id: reason}`` for spam transfers.
 
-    ``real_counterparties`` maps a tracked wallet to addresses it sent value to,
-    which is what poisoners imitate. ``recipient_counts`` maps
+    ``real_counterparties`` maps a tracked wallet to the addresses it sent value
+    to and when it first did, which is what poisoners imitate. ``recipient_counts`` maps
     ``(tx_hash, token)`` to the number of distinct recipients known for it;
     when omitted it is counted from ``transfers``.
     """
@@ -107,6 +136,7 @@ def transfer_spam_reasons(
             recipients[(t.tx_hash, t.token_address)].add(t.to_address)
         recipient_counts = {k: len(v) for k, v in recipients.items()}
 
+    indexes = {wallet: PaidIndex(paid) for wallet, paid in real_counterparties.items()}
     for t in items:
         category = TransferCategory(t.category)
         if t.token_address in spam_tokens:
@@ -128,9 +158,8 @@ def transfer_spam_reasons(
             reasons[t.id] = "mass_airdrop"
             continue
         for wallet, other in ((t.to_address, t.from_address), (t.from_address, t.to_address)):
-            if wallet in tracked and any(
-                lookalike(other, real) for real in real_counterparties.get(wallet, ())
-            ):
+            index = indexes.get(wallet) if wallet in tracked else None
+            if index is not None and index.imitated_by(other):
                 reasons[t.id] = "lookalike_address"
                 break
     return reasons

@@ -19,6 +19,7 @@ ALEMBIC_INI = REPO_ROOT / "packages" / "core" / "alembic.ini"
 def pytest_configure() -> None:
     # Unit tests must not depend on the developer's local config or env.
     os.environ.setdefault("HEATMAP_CONFIG_FILES", str(REPO_ROOT / "config" / "default.yaml"))
+    os.environ.setdefault("HEATMAP_ENV_FILE", "")  # never pick up the developer's .env
 
 
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:

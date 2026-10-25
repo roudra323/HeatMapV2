@@ -1,9 +1,11 @@
+import os
 from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
 
 from heatmap_core.config import ChainRegistry, Settings, UnknownChainError
+from heatmap_core.config.settings import load_env_file
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -19,6 +21,7 @@ def test_default_yaml_loads() -> None:
     assert settings.chains["ethereum"].chain_id == 1
     assert settings.providers["alchemy"].kind == "alchemy"
     assert len(settings.providers["etherscan"].keys) == 2
+    assert settings.tracking.max_sent_txs == 10_000
 
 
 @pytest.mark.usefixtures("default_config")
@@ -50,6 +53,31 @@ def test_provider_secret_read_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
     keys = Settings().providers["alchemy"].keys
     assert keys[0].secret() == "secret-value"
     assert keys[1].secret() is None
+
+
+def test_env_file_loaded_without_overriding_env(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    env_file = tmp_path / ".env"
+    env_file.write_text("HEATMAP_TEST_FROM_FILE=file\nHEATMAP_TEST_ALREADY_SET=file\n")
+    monkeypatch.delenv("HEATMAP_TEST_FROM_FILE", raising=False)
+    monkeypatch.setenv("HEATMAP_TEST_ALREADY_SET", "env")
+    monkeypatch.setenv("HEATMAP_ENV_FILE", str(env_file))
+    load_env_file()
+    assert os.environ["HEATMAP_TEST_FROM_FILE"] == "file"
+    assert os.environ["HEATMAP_TEST_ALREADY_SET"] == "env"
+    monkeypatch.delenv("HEATMAP_TEST_FROM_FILE")
+
+
+def test_empty_env_file_setting_disables_loading(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / ".env").write_text("HEATMAP_TEST_FROM_FILE=file\n")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("HEATMAP_TEST_FROM_FILE", raising=False)
+    monkeypatch.setenv("HEATMAP_ENV_FILE", "")
+    load_env_file()
+    assert "HEATMAP_TEST_FROM_FILE" not in os.environ
 
 
 def test_chain_with_unknown_provider_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
