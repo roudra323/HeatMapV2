@@ -35,3 +35,6 @@ apps/web/next-env.d.ts
 .vscode/
 .idea/
 .DS_Store
+
+# TypeScript incremental build info
+*.tsbuildinfo
