@@ -1,4 +1,5 @@
 import type { components } from "./api-types";
+import { DEMO, DemoError, demoGet, READ_ONLY_MESSAGE } from "./demo";
 
 export type Schemas = components["schemas"];
 export type WalletProfile = Schemas["WalletProfileOut"];
@@ -41,7 +42,17 @@ function url(path: string, query?: Query): string {
   return u.toString();
 }
 
+async function demoRequest<T>(method: string, path: string, query?: Query): Promise<T> {
+  if (method !== "GET") throw new ApiError(403, READ_ONLY_MESSAGE);
+  try {
+    return await demoGet<T>(path, query);
+  } catch (e) {
+    throw e instanceof DemoError ? new ApiError(e.status, e.message) : e;
+  }
+}
+
 async function request<T>(method: string, path: string, query?: Query, body?: unknown): Promise<T> {
+  if (DEMO) return demoRequest<T>(method, path, query);
   let res: Response;
   try {
     res = await fetch(url(path, query), {

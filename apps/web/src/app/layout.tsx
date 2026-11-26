@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import type { ReactNode } from "react";
 
+import { DemoBanner } from "@/components/DemoBanner";
 import { SiteHeader } from "@/components/Nav";
 
 import "./globals.css";
@@ -44,6 +45,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         >
           Skip to content
         </a>
+        <DemoBanner />
         <SiteHeader />
         <main id="main" tabIndex={-1} className="mx-auto max-w-7xl px-4 pt-6 pb-16 outline-none sm:px-6 sm:pt-8 lg:px-8">
           {children}
